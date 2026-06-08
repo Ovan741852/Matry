@@ -1134,6 +1134,16 @@ button {
   color: var(--ink);
 }
 
+.provider-capabilities div {
+  display: grid;
+  gap: 5px;
+}
+
+.provider-capabilities em {
+  color: #9a6700;
+  font-style: normal;
+}
+
 #providerStatus {
   color: var(--muted);
   font-size: 13px;

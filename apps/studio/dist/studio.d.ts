@@ -1,6 +1,6 @@
 type GenerationMode = "text" | "frames" | "reference" | "import";
 type ShotStatus = "draft" | "generating" | "done";
-type ProviderId = "vidu";
+type ProviderId = "vidu" | "google-veo" | "openai-sora" | "runway" | "fal";
 type GenerationJobStatus = "waiting" | "generating" | "done" | "failed";
 type TimelineTrackKind = "video" | "music" | "subtitle";
 type VideoCandidate = {
@@ -64,6 +64,7 @@ type ProviderCapability = {
     id: ProviderId;
     label: string;
     endpoints: Record<GenerationMode, string | null>;
+    pricingHint: string;
 };
 type Elements = {
     totalDuration: HTMLElement;
@@ -102,6 +103,9 @@ type Elements = {
     providerBaseUrl: HTMLInputElement;
     providerStatus: HTMLElement;
     saveApiSettings: HTMLButtonElement;
+    providerCapabilityTitle: HTMLElement;
+    providerCapabilityList: HTMLElement;
+    providerPricingHint: HTMLElement;
 };
 declare const modeLabels: Record<GenerationMode, string>;
 declare const palette: Array<[string, string]>;
@@ -156,6 +160,7 @@ declare function clamp(value: number, min: number, max: number): number;
 declare function saveProviderSettings(): void;
 declare function addGenerationJob(shot: Shot, status: GenerationJobStatus, requestedCount: number, message: string): GenerationJobRecord;
 declare function loadProviderSettings(): ProviderSettings;
+declare function isProviderId(value: unknown): value is ProviderId;
 declare function createMockCandidates(count: number): VideoCandidate[];
 declare function startMockGeneration(forceError?: boolean): void;
 declare function createMockCandidatesPatch(count: number): Partial<Shot>;

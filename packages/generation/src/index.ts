@@ -1,6 +1,6 @@
 import type { AssetRef, GenerationMode, Shot } from "@matry/project";
 
-export type ProviderId = "mock" | "vidu";
+export type ProviderId = "mock" | "vidu" | "google-veo" | "openai-sora" | "runway" | "fal";
 
 export type ProviderSecretRef = {
   providerId: ProviderId;

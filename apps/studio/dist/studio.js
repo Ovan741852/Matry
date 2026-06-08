@@ -22,6 +22,51 @@ const providerCapabilities = {
             reference: "/ent/v2/reference2video",
             import: "/ent/v2/img2video",
         },
+        pricingHint: "Vidu API 使用 credits。可能有活動或試用額度，但不要假設永久免費。",
+    },
+    "google-veo": {
+        id: "google-veo",
+        label: "Google Gemini / Veo",
+        endpoints: {
+            text: "Gemini API / Veo generate",
+            frames: "Vertex AI Veo advanced controls",
+            reference: "Gemini API / Veo image prompt",
+            import: null,
+        },
+        pricingHint: "Google 官方 Gemini API 文件標示 Veo 影片在 paid tier，影片 free tier 不可用。",
+    },
+    "openai-sora": {
+        id: "openai-sora",
+        label: "OpenAI Sora",
+        endpoints: {
+            text: "/v1/videos",
+            frames: "/v1/videos with image/reference workflow",
+            reference: "/v1/videos with image/reference workflow",
+            import: null,
+        },
+        pricingHint: "OpenAI Sora API 依影片秒數/模型計價；ChatGPT 方案與 API 計費分開。",
+    },
+    runway: {
+        id: "runway",
+        label: "Runway",
+        endpoints: {
+            text: "Runway video generation task",
+            frames: "Runway image/video generation task",
+            reference: "Runway image-to-video/reference task",
+            import: "Runway video-to-video/edit task",
+        },
+        pricingHint: "Runway API 使用 credits，官方文件列出每秒 credits 成本。",
+    },
+    fal: {
+        id: "fal",
+        label: "fal.ai",
+        endpoints: {
+            text: "model-dependent endpoint",
+            frames: "model-dependent endpoint",
+            reference: "model-dependent endpoint",
+            import: "model-dependent endpoint",
+        },
+        pricingHint: "fal.ai 是模型平台，通常預付 credits；是否有新用戶試用額度會變動。",
     },
 };
 const defaultProviderSettings = {
@@ -141,6 +186,9 @@ function getElements() {
         providerBaseUrl: mustElement("#providerBaseUrl", HTMLInputElement),
         providerStatus: mustElement("#providerStatus", HTMLElement),
         saveApiSettings: mustElement("#saveApiSettings", HTMLButtonElement),
+        providerCapabilityTitle: mustElement("#providerCapabilityTitle", HTMLElement),
+        providerCapabilityList: mustElement("#providerCapabilityList", HTMLElement),
+        providerPricingHint: mustElement("#providerPricingHint", HTMLElement),
     };
 }
 function mustElement(selector, ctor) {
@@ -364,7 +412,13 @@ function renderProviderSettings() {
     els.providerSelect.value = state.providerSettings.provider;
     els.providerApiKey.value = state.providerSettings.apiKey;
     els.providerBaseUrl.value = state.providerSettings.baseUrl;
-    els.providerStatus.textContent = state.providerSettings.apiKey ? "Vidu 已設定" : "尚未儲存";
+    const capability = providerCapabilities[state.providerSettings.provider];
+    els.providerStatus.textContent = state.providerSettings.apiKey ? `${capability.label} 已設定` : "尚未儲存";
+    els.providerCapabilityTitle.textContent = `${capability.label} 對應模式`;
+    els.providerCapabilityList.innerHTML = Object.entries(capability.endpoints)
+        .map(([mode, endpoint]) => `<span>${modeLabels[mode]} → ${endpoint ?? "暫不支援"}</span>`)
+        .join("");
+    els.providerPricingHint.textContent = capability.pricingHint;
 }
 function bindDynamicInteractions() {
     els.rhythmTrack.querySelectorAll("[data-timeline-right-handle]").forEach((handle) => {
@@ -725,7 +779,7 @@ function loadProviderSettings() {
             return defaultProviderSettings;
         const parsed = JSON.parse(raw);
         return {
-            provider: parsed.provider === "vidu" ? parsed.provider : "vidu",
+            provider: isProviderId(parsed.provider) ? parsed.provider : "vidu",
             apiKey: parsed.apiKey ?? "",
             baseUrl: parsed.baseUrl ?? defaultProviderSettings.baseUrl,
         };
@@ -733,6 +787,9 @@ function loadProviderSettings() {
     catch {
         return defaultProviderSettings;
     }
+}
+function isProviderId(value) {
+    return typeof value === "string" && value in providerCapabilities;
 }
 function createMockCandidates(count) {
     return Array.from({ length: count }, (_, index) => ({

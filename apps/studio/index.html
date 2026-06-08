@@ -168,6 +168,10 @@
           <span>Provider</span>
           <select id="providerSelect">
             <option value="vidu">Vidu</option>
+            <option value="google-veo">Google Gemini / Veo</option>
+            <option value="openai-sora">OpenAI Sora</option>
+            <option value="runway">Runway</option>
+            <option value="fal">fal.ai</option>
           </select>
         </label>
 
@@ -183,11 +187,9 @@
         </label>
 
         <section class="provider-capabilities">
-          <strong>Vidu 對應模式</strong>
-          <span>用文字生成 → text2video</span>
-          <span>首幀到尾幀生成 → start-end2video</span>
-          <span>參考圖生成 → reference2video</span>
-          <span>分鏡/圖片轉影片 → img2video</span>
+          <strong id="providerCapabilityTitle">Provider 對應模式</strong>
+          <div id="providerCapabilityList"></div>
+          <em id="providerPricingHint"></em>
         </section>
 
         <footer>
