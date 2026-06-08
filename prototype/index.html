@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Matry Storyboard Prototype</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div class="brand">
+          <span>Matry Prototype</span>
+          <input id="projectName" value="可樂廣告分鏡" aria-label="專案名稱" />
+        </div>
+        <div class="project-stats">
+          <div><span>段落</span><strong id="sceneCount">0</strong></div>
+          <div><span>分鏡</span><strong id="shotCount">0</strong></div>
+          <div><span>總長</span><strong id="totalDuration">0s</strong></div>
+        </div>
+      </header>
+
+      <section class="layout">
+        <aside class="scene-panel" aria-label="故事段落">
+          <div class="panel-head">
+            <div>
+              <h1>故事結構</h1>
+              <p>用段落整理節奏，每段底下放多格分鏡。</p>
+            </div>
+            <button id="addScene" type="button">新增段落</button>
+          </div>
+          <div id="sceneList" class="scene-list"></div>
+        </aside>
+
+        <section class="workbench" aria-label="分鏡工作區">
+          <div class="workbench-head">
+            <div>
+              <span id="activeSceneLabel">段落</span>
+              <h2 id="activeSceneTitle">選取段落</h2>
+            </div>
+            <div class="head-actions">
+              <button id="addShot" class="primary" type="button">新增分鏡</button>
+              <button id="playPreview" type="button">播放節奏</button>
+            </div>
+          </div>
+
+          <div id="shotRail" class="shot-rail" aria-label="分鏡列"></div>
+
+          <section class="preview-stage" aria-label="節奏預覽">
+            <div class="stage-image" id="stageImage"></div>
+            <div class="stage-copy">
+              <span id="stageKicker">目前分鏡</span>
+              <h3 id="stageTitle">選取一格分鏡</h3>
+              <p id="stagePrompt"></p>
+            </div>
+            <div id="rhythmTrack" class="rhythm-track"></div>
+          </section>
+        </section>
+
+        <aside class="inspector" aria-label="分鏡設定">
+          <div class="tabbar" role="tablist" aria-label="設定分頁">
+            <button class="tab active" data-tab="content" type="button">內容</button>
+            <button class="tab" data-tab="generate" type="button">生成</button>
+            <button class="tab" data-tab="media" type="button">素材</button>
+          </div>
+
+          <section class="tab-panel active" data-panel="content">
+            <label class="field">
+              <span>分鏡標題</span>
+              <input id="shotTitle" type="text" />
+            </label>
+            <label class="field small-field">
+              <span>秒數</span>
+              <input id="shotDuration" type="number" min="1" max="20" />
+            </label>
+            <label class="field">
+              <span>畫面描述</span>
+              <textarea id="shotPrompt" rows="5"></textarea>
+            </label>
+          </section>
+
+          <section class="tab-panel" data-panel="generate">
+            <fieldset class="mode-group">
+              <legend>生成方式</legend>
+              <label><input type="radio" name="mode" value="text" /><span>只用文字</span></label>
+              <label><input type="radio" name="mode" value="frames" /><span>起點到終點</span></label>
+              <label><input type="radio" name="mode" value="reference" /><span>參考圖生成</span></label>
+            </fieldset>
+            <button id="mockGenerateVideo" class="primary full" type="button">模擬生成影片版本</button>
+            <div id="candidateList" class="candidate-list"></div>
+          </section>
+
+          <section class="tab-panel" data-panel="media">
+            <div class="mini-preview" id="storyboardPreview"></div>
+            <div class="button-grid">
+              <button id="generateStoryboard" class="primary" type="button">生成分鏡圖</button>
+              <button id="replaceStoryboard" type="button">換一張</button>
+            </div>
+            <button id="deleteShot" class="danger full" type="button">刪除這格分鏡</button>
+          </section>
+        </aside>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
