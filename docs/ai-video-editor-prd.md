@@ -2,7 +2,9 @@
 
 ## Product Intent
 
-Build a standalone desktop application for planning, generating, selecting, and assembling AI-generated video shots.
+Build a standalone desktop application for planning, generating, selecting, and assembling AI-generated short videos.
+
+The primary UX target is videos up to about 15 minutes. This is not a hard technical duration limit; it is a product focus. Matry should feel best for ads, reels, shorts, explainers, product demos, and social posts rather than long-form film editing.
 
 The editor is storyboard-first rather than timeline-first. The primary interaction should feel like arranging a film strip: users see the whole story as a sequence of visual shots, each with a duration, short intent, storyboard image, generation mode, and selected/generated video.
 
@@ -164,3 +166,92 @@ Optional future grouping can be modeled separately, but groups should not compli
 4. Real generation: integrate the first text-to-video/image-to-video provider.
 5. Assembly: concatenate selected shot videos and export a single video file.
 6. AI-assisted planning: text-to-shots split, then image-to-shots split.
+
+## Roadmap
+
+### Product Layers
+
+1. Storyboard planning
+   - Break an idea into shots.
+   - Generate or attach storyboard images.
+   - Confirm visual rhythm before generating video.
+
+2. AI generation
+   - Generate each shot with provider adapters.
+   - Support BYOK provider settings.
+   - Keep multiple generated candidates per shot.
+   - Track waiting, success, and failure states.
+
+3. Short-video timeline
+   - Main video track from storyboard shots.
+   - Music tracks, possibly multiple.
+   - Subtitle tracks, possibly multiple.
+   - Shared playhead and simple trim controls.
+
+4. Export
+   - Validate that each video shot has selected media.
+   - Export video for platform-specific aspect ratios and presets.
+
+5. Publish planning
+   - Prepare title, description, hashtags, cover, and platform-specific metadata.
+   - This comes before direct platform upload.
+
+6. Schedule publishing
+   - Schedule uploads to social platforms.
+   - Treat as a later workflow after export and publish planning are stable.
+
+### MVP
+
+MVP should focus on making a short AI video:
+
+- Storyboard/shot planning
+- Storyboard image workflow
+- Provider settings with BYOK
+- Mock provider plus first real provider adapter
+- Per-shot generation jobs and candidates
+- Three-track short-video timeline:
+  - Video
+  - Music
+  - Subtitles
+- Basic trim and playhead controls
+- Export readiness validation
+
+Direct social platform scheduling is not part of MVP.
+
+### Phase 2
+
+Add production readiness around export and publishing:
+
+- Real video assembly/export
+- Platform presets:
+  - YouTube Shorts
+  - TikTok
+  - Instagram Reels
+  - Facebook Reels
+  - X video
+- Caption/description/hashtag assistant
+- Cover image selection
+- Publish checklist
+- Better subtitle editing
+- Music import and timing controls
+
+### Phase 3
+
+Add scheduling and platform integration:
+
+- OAuth account connections
+- Scheduled publish jobs
+- Platform upload status
+- Retry and failure handling
+- Draft publishing
+- Per-platform metadata variants
+
+### Out Of Scope Until Later
+
+- Full professional multi-track video editing
+- Long-form documentary/film editing workflows
+- Advanced audio mixing
+- Color grading
+- Keyframes and motion graphics
+- Multi-user collaboration
+- Cloud sync and team accounts
