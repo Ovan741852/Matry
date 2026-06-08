@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "lib": ["ES2021", "DOM"],
+    "strict": true,
+    "noImplicitAny": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@matry/project": ["packages/project/src/index.ts"],
+      "@matry/generation": ["packages/generation/src/index.ts"],
+      "@matry/providers": ["packages/providers/src/index.ts"]
+    }
+  }
+}

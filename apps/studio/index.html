@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Matry Studio</title>
+    <link rel="stylesheet" href="./styles/studio.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <section class="project-meta" aria-label="專案資訊">
+          <button class="ghost icon-only" type="button" aria-label="返回">←</button>
+          <div class="divider"></div>
+          <input id="projectName" class="project-title" value="可樂短廣告" aria-label="專案名稱" />
+          <button class="ghost icon-only" type="button" aria-label="編輯名稱">✎</button>
+          <div class="pill"><span>總長</span><strong id="totalDuration">0s</strong></div>
+          <div class="pill"><span>比例</span><strong>9:16</strong></div>
+          <div class="pill"><span>風格</span><strong>商業廣告</strong></div>
+        </section>
+        <section class="project-actions" aria-label="專案操作">
+          <button id="openApiSettings" class="button settings-button" type="button">⚙ Provider 設定</button>
+          <button id="playPreview" class="button" type="button">▶ 播放預覽</button>
+          <button class="button" type="button">✦ 自動補齊故事</button>
+          <button class="button primary" type="button">⇧ 輸出影片</button>
+        </section>
+      </header>
+
+      <section class="storyboard-section" aria-label="Storyboard">
+        <div class="section-title">
+          <span class="section-icon">▥</span>
+          <h1>Storyboard</h1>
+          <span id="shotCount" class="muted"></span>
+        </div>
+        <div id="shotRail" class="storyboard-rail" aria-label="分鏡列"></div>
+      </section>
+
+      <section class="main-grid">
+        <section class="preview-panel" aria-label="預覽">
+          <nav class="panel-tabs" aria-label="預覽模式">
+            <button class="panel-tab" data-preview-tab="full" type="button">整支預覽</button>
+            <button class="panel-tab active" data-preview-tab="shot" type="button">片段預覽</button>
+          </nav>
+
+          <div class="video-stage" id="stageImage">
+            <div class="timecode" id="stageTimecode">00:00 / 00:00</div>
+          </div>
+          <div id="rhythmTrack" class="scrub-track" aria-label="時間軸"></div>
+
+          <div class="preview-actions">
+            <button id="playSelected" class="button primary-outline" type="button">▶ 播放此段</button>
+            <button id="playFromTime" class="button" type="button">↔ 從指定秒數播</button>
+            <label class="play-from">
+              <span>從</span>
+              <input id="playFrom" type="number" min="0" step="1" value="0" />
+              <span>秒</span>
+            </label>
+            <button class="icon-button" type="button" aria-label="截圖">▣</button>
+            <button class="icon-button" type="button" aria-label="更多">⋯</button>
+          </div>
+
+          <section class="versions" aria-label="版本">
+            <div class="versions-head">
+              <h2>版本</h2>
+              <div class="version-nav">
+                <button class="icon-button" type="button" aria-label="上一個">‹</button>
+                <button class="icon-button" type="button" aria-label="下一個">›</button>
+              </div>
+            </div>
+            <div id="candidateList" class="version-list"></div>
+          </section>
+        </section>
+
+        <aside class="settings-panel" aria-label="片段設定">
+          <header class="settings-head">
+            <h2 id="settingsTitle">Shot 設定</h2>
+            <button id="openApiSettingsInline" class="button settings-button compact" type="button">API Key</button>
+          </header>
+
+          <div class="settings-body">
+            <label class="field row-field">
+              <span>片段名稱</span>
+              <input id="shotTitle" type="text" />
+            </label>
+
+            <label class="field row-field duration-field">
+              <span>秒數</span>
+              <input id="shotDuration" type="number" min="1" max="20" />
+              <em>秒</em>
+            </label>
+
+            <div class="trim-row">
+              <button id="trimShorter" class="button" type="button">剪短 1s</button>
+              <button id="trimLonger" class="button" type="button">加長 1s</button>
+            </div>
+
+            <label class="field">
+              <span>描述這一段</span>
+              <textarea id="shotPrompt" rows="4" maxlength="200"></textarea>
+              <small id="promptCount">0 / 200</small>
+            </label>
+
+            <fieldset class="generation-modes">
+              <legend>生成方式</legend>
+              <label><input type="radio" name="mode" value="text" /><span>用文字生成</span></label>
+              <label><input type="radio" name="mode" value="frames" /><span>首幀到尾幀生成</span></label>
+              <label><input type="radio" name="mode" value="reference" /><span>參考圖生成</span></label>
+              <label><input type="radio" name="mode" value="import" /><span>匯入影片</span></label>
+            </fieldset>
+
+            <section class="storyboard-image-tools">
+              <div class="label">分鏡圖</div>
+              <div id="storyboardPreview" class="storyboard-sketch"></div>
+              <div class="button-pair">
+                <button id="uploadStoryboard" class="button" type="button">⇧ 上傳</button>
+                <button id="generateStoryboard" class="button" type="button">✦ 生成分鏡圖</button>
+              </div>
+            </section>
+
+            <section class="lens-tools" aria-label="鏡頭">
+              <div class="label">鏡頭</div>
+              <div class="chip-list">
+                <button class="chip active" type="button">慢動作</button>
+                <button class="chip" type="button">特寫</button>
+                <button class="chip" type="button">推近</button>
+                <button class="chip" type="button">廣角</button>
+                <button class="chip" type="button">手持感</button>
+              </div>
+            </section>
+
+            <section class="generation-control">
+              <label class="field row-field duration-field">
+                <span>生成數量</span>
+                <input id="generationCount" type="number" min="1" max="4" value="4" />
+                <em>部</em>
+              </label>
+              <div id="generationNotice" class="generation-notice idle">尚未送出生成工作</div>
+              <div id="generationJobs" class="generation-jobs" aria-label="生成紀錄"></div>
+            </section>
+          </div>
+
+          <footer class="settings-footer">
+            <button id="mockGenerateVideo" class="generate-button" type="button">✦ 生成影片</button>
+            <button id="mockCreditError" class="button full-width" type="button">模擬額度不足</button>
+          </footer>
+        </aside>
+      </section>
+    </main>
+
+    <dialog id="apiSettingsDialog" class="settings-dialog">
+      <form method="dialog" class="settings-dialog-card">
+        <header>
+          <div>
+            <span class="dialog-eyebrow">Provider</span>
+            <h2>API 設定</h2>
+          </div>
+          <button id="closeApiSettings" class="ghost icon-only" value="cancel" type="submit" aria-label="關閉">×</button>
+        </header>
+
+        <label class="field">
+          <span>Provider</span>
+          <select id="providerSelect">
+            <option value="vidu">Vidu</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>API Key</span>
+          <input id="providerApiKey" type="password" placeholder="填入 Vidu API Key" autocomplete="off" />
+          <small>Prototype 會先存在這台瀏覽器。正式版應改存在桌面後端或系統鑰匙圈。</small>
+        </label>
+
+        <label class="field">
+          <span>Base URL</span>
+          <input id="providerBaseUrl" type="url" value="https://api.vidu.com" />
+        </label>
+
+        <section class="provider-capabilities">
+          <strong>Vidu 對應模式</strong>
+          <span>用文字生成 → text2video</span>
+          <span>首幀到尾幀生成 → start-end2video</span>
+          <span>參考圖生成 → reference2video</span>
+          <span>分鏡/圖片轉影片 → img2video</span>
+        </section>
+
+        <footer>
+          <span id="providerStatus">尚未儲存</span>
+          <button id="saveApiSettings" class="button primary" value="default" type="submit">儲存設定</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <script src="./dist/studio.js"></script>
+  </body>
+</html>

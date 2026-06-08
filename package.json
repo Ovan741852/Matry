@@ -1,0 +1,15 @@
+{
+  "name": "matry",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc -b packages/project packages/generation packages/providers apps/studio",
+    "build:studio": "tsc -p apps/studio/tsconfig.json",
+    "typecheck": "tsc -b --pretty false packages/project packages/generation packages/providers apps/studio"
+  },
+  "devDependencies": {}
+}

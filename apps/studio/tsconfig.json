@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "target": "ES2021",
+    "module": "none",
+    "lib": ["ES2021", "DOM"],
+    "strict": true,
+    "noImplicitAny": true,
+    "outFile": "./dist/studio.js",
+    "skipLibCheck": true
+  },
+  "references": [
+    { "path": "../../packages/project" },
+    { "path": "../../packages/generation" },
+    { "path": "../../packages/providers" }
+  ],
+  "files": ["./src-ts/studio.ts"]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@matry/studio",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@matry/generation": "0.1.0",
+    "@matry/project": "0.1.0",
+    "@matry/providers": "0.1.0"
+  }
+}
