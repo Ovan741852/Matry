@@ -2,6 +2,7 @@ type GenerationMode = "text" | "frames" | "reference" | "import";
 type ShotStatus = "draft" | "generating" | "done";
 type ProviderId = "vidu";
 type GenerationJobStatus = "waiting" | "generating" | "done" | "failed";
+type TimelineTrackKind = "video" | "music" | "subtitle";
 type VideoCandidate = {
     id: string;
     name: string;
@@ -34,6 +35,19 @@ type Project = {
     aspectRatio: string;
     style: string;
     shots: Shot[];
+    timeline: TimelineTrack[];
+};
+type TimelineClip = {
+    id: string;
+    title: string;
+    startSeconds: number;
+    durationSeconds: number;
+};
+type TimelineTrack = {
+    id: string;
+    kind: TimelineTrackKind;
+    label: string;
+    clips: TimelineClip[];
 };
 type StudioState = {
     project: Project;
@@ -55,6 +69,9 @@ type Elements = {
     totalDuration: HTMLElement;
     shotCount: HTMLElement;
     shotRail: HTMLElement;
+    openStoryboardDialog: HTMLButtonElement;
+    closeStoryboardDialog: HTMLButtonElement;
+    storyboardDialog: HTMLDialogElement;
     stageImage: HTMLElement;
     stageTimecode: HTMLElement;
     rhythmTrack: HTMLElement;
@@ -96,6 +113,12 @@ declare function createCandidate(name: string, status: string, seed: number): Vi
 declare function createDemoProject(): Project;
 declare let state: StudioState;
 declare let previewTimer: number | null;
+declare let playheadSeconds: number;
+declare let activeTrim: {
+    shotId: string;
+    startX: number;
+    startDuration: number;
+} | null;
 declare const els: Elements;
 declare function getElements(): Elements;
 declare function mustElement<T extends Element>(selector: string, ctor: {
@@ -107,9 +130,12 @@ declare function render(): void;
 declare function renderGenerationState(shot: Shot): void;
 declare function generationJobLabel(status: GenerationJobStatus): string;
 declare function renderShotCard(shot: Shot, index: number): string;
+declare function getShotCardWidth(duration: number): number;
 declare function renderAddCard(): string;
 declare function renderStage(shot: Shot, index: number): string;
 declare function renderScrubTrack(total: number): string;
+declare function renderTimelineTrack(track: TimelineTrack, total: number): string;
+declare function renderTimelineTicks(total: number): string;
 declare function renderCandidates(shot: Shot): string;
 declare function renderProviderSettings(): void;
 declare function bindDynamicInteractions(): void;
@@ -118,10 +144,15 @@ declare function addShot(): void;
 declare function updateSelected(patch: Partial<Shot>): void;
 declare function updateShotById(shotId: string, patch: Partial<Shot>): void;
 declare function adjustDuration(id: string, delta: number): void;
+declare function setShotDuration(id: string, duration: number, shouldRender?: boolean): void;
+declare function updateTimelineDurationPreview(id: string, duration: number): void;
 declare function moveShot(id: string, direction: number): void;
 declare function reorderShot(draggedId: string, targetId: string): void;
 declare function playPreview(startAtSeconds?: number, onlySelected?: boolean): void;
 declare function locateTime(event: MouseEvent): void;
+declare function updatePlayheadFromClientX(clientX: number, shouldRender: boolean): void;
+declare function getShotStartSeconds(shotId: string): number;
+declare function clamp(value: number, min: number, max: number): number;
 declare function saveProviderSettings(): void;
 declare function addGenerationJob(shot: Shot, status: GenerationJobStatus, requestedCount: number, message: string): GenerationJobRecord;
 declare function loadProviderSettings(): ProviderSettings;

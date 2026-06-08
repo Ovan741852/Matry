@@ -19,21 +19,13 @@
           <div class="pill"><span>風格</span><strong>商業廣告</strong></div>
         </section>
         <section class="project-actions" aria-label="專案操作">
+          <button id="openStoryboardDialog" class="button" type="button">▥ Storyboard</button>
           <button id="openApiSettings" class="button settings-button" type="button">⚙ Provider 設定</button>
           <button id="playPreview" class="button" type="button">▶ 播放預覽</button>
           <button class="button" type="button">✦ 自動補齊故事</button>
           <button class="button primary" type="button">⇧ 輸出影片</button>
         </section>
       </header>
-
-      <section class="storyboard-section" aria-label="Storyboard">
-        <div class="section-title">
-          <span class="section-icon">▥</span>
-          <h1>Storyboard</h1>
-          <span id="shotCount" class="muted"></span>
-        </div>
-        <div id="shotRail" class="storyboard-rail" aria-label="分鏡列"></div>
-      </section>
 
       <section class="main-grid">
         <section class="preview-panel" aria-label="預覽">
@@ -146,6 +138,21 @@
         </aside>
       </section>
     </main>
+
+    <dialog id="storyboardDialog" class="storyboard-dialog">
+      <section class="storyboard-dialog-card">
+        <header>
+          <div class="section-title">
+            <span class="section-icon">▥</span>
+            <h2>Storyboard</h2>
+            <span id="shotCount" class="muted"></span>
+          </div>
+          <button id="closeStoryboardDialog" class="ghost icon-only" type="button" aria-label="關閉">×</button>
+        </header>
+        <p>這裡用來規劃與重排分鏡；主畫面的影片軌才是主要剪輯位置。</p>
+        <div id="shotRail" class="storyboard-rail" aria-label="分鏡列"></div>
+      </section>
+    </dialog>
 
     <dialog id="apiSettingsDialog" class="settings-dialog">
       <form method="dialog" class="settings-dialog-card">

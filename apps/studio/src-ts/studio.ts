@@ -2,6 +2,7 @@ type GenerationMode = "text" | "frames" | "reference" | "import";
 type ShotStatus = "draft" | "generating" | "done";
 type ProviderId = "vidu";
 type GenerationJobStatus = "waiting" | "generating" | "done" | "failed";
+type TimelineTrackKind = "video" | "music" | "subtitle";
 
 type VideoCandidate = {
   id: string;
@@ -38,6 +39,21 @@ type Project = {
   aspectRatio: string;
   style: string;
   shots: Shot[];
+  timeline: TimelineTrack[];
+};
+
+type TimelineClip = {
+  id: string;
+  title: string;
+  startSeconds: number;
+  durationSeconds: number;
+};
+
+type TimelineTrack = {
+  id: string;
+  kind: TimelineTrackKind;
+  label: string;
+  clips: TimelineClip[];
 };
 
 type StudioState = {
@@ -63,6 +79,9 @@ type Elements = {
   totalDuration: HTMLElement;
   shotCount: HTMLElement;
   shotRail: HTMLElement;
+  openStoryboardDialog: HTMLButtonElement;
+  closeStoryboardDialog: HTMLButtonElement;
+  storyboardDialog: HTMLDialogElement;
   stageImage: HTMLElement;
   stageTimecode: HTMLElement;
   rhythmTrack: HTMLElement;
@@ -181,6 +200,24 @@ function createDemoProject(): Project {
       createShot("氣泡噴出", 4, "frames", "大量氣泡從瓶口噴出，慢動作，水珠飛濺，背景為深色攝影棚。", 1, "generating"),
       createShot("結尾標語", 3, "text", "可樂瓶站在冰塊上，畫面出現醒目標語，最後定格成廣告主視覺。", 2, "done"),
     ],
+    timeline: [
+      {
+        id: crypto.randomUUID(),
+        kind: "music",
+        label: "音樂 1",
+        clips: [{ id: crypto.randomUUID(), title: "清爽廣告配樂", startSeconds: 0, durationSeconds: 9 }],
+      },
+      {
+        id: crypto.randomUUID(),
+        kind: "subtitle",
+        label: "字幕 1",
+        clips: [
+          { id: crypto.randomUUID(), title: "冰涼開場", startSeconds: 0.4, durationSeconds: 2.2 },
+          { id: crypto.randomUUID(), title: "氣泡爆發", startSeconds: 3, durationSeconds: 2.6 },
+          { id: crypto.randomUUID(), title: "暢爽時刻", startSeconds: 6.2, durationSeconds: 2.4 },
+        ],
+      },
+    ],
   };
 }
 
@@ -195,6 +232,14 @@ let state: StudioState = (() => {
 })();
 
 let previewTimer: number | null = null;
+let playheadSeconds = 0;
+let activeTrim:
+  | {
+      shotId: string;
+      startX: number;
+      startDuration: number;
+    }
+  | null = null;
 
 const els = getElements();
 
@@ -203,6 +248,9 @@ function getElements(): Elements {
     totalDuration: mustElement("#totalDuration", HTMLElement),
     shotCount: mustElement("#shotCount", HTMLElement),
     shotRail: mustElement("#shotRail", HTMLElement),
+    openStoryboardDialog: mustElement("#openStoryboardDialog", HTMLButtonElement),
+    closeStoryboardDialog: mustElement("#closeStoryboardDialog", HTMLButtonElement),
+    storyboardDialog: mustElement("#storyboardDialog", HTMLDialogElement),
     stageImage: mustElement("#stageImage", HTMLElement),
     stageTimecode: mustElement("#stageTimecode", HTMLElement),
     rhythmTrack: mustElement("#rhythmTrack", HTMLElement),
@@ -256,6 +304,7 @@ function render(): void {
   const total = totalDuration();
   const current = selectedShot();
   const shotIndex = state.project.shots.findIndex((shot) => shot.id === current.id);
+  playheadSeconds = clamp(playheadSeconds, 0, total);
 
   els.totalDuration.textContent = `${total}s`;
   els.shotCount.textContent = `${state.project.shots.length} 個片段`;
@@ -328,9 +377,10 @@ function renderShotCard(shot: Shot, index: number): string {
   const playing = shot.id === state.playingShotId ? " playing" : "";
   const statusClass = shot.status === "generating" ? " generating" : "";
   const statusText = shot.status === "generating" ? "⟳ 生成中" : shot.status === "done" ? "✓ 已生成" : "○ 草稿";
+  const cardWidth = getShotCardWidth(shot.duration);
 
   return `
-    <article class="storyboard-card${active}${playing}" data-shot="${shot.id}">
+    <article class="storyboard-card${active}${playing}" data-shot="${shot.id}" style="--shot-card-width: ${cardWidth}px">
       <div class="shot-image">
         ${shotSvg(shot, "card")}
         <span class="status-badge${statusClass}">${statusText}</span>
@@ -340,6 +390,10 @@ function renderShotCard(shot: Shot, index: number): string {
         <strong>${escapeHtml(shot.title)}</strong>
         <span class="duration">◷ ${shot.duration} 秒</span>
       </div>
+      <div class="trim-bar" aria-label="拖拉調整片段長度">
+        <div class="trim-fill"></div>
+        <button class="trim-handle" data-trim-handle="${shot.id}" type="button" aria-label="拖拉片段長度"></button>
+      </div>
       <div class="quick-edits">
         <button data-action="shorter" data-shot="${shot.id}" type="button">-1s</button>
         <button data-action="left" data-shot="${shot.id}" type="button">←</button>
@@ -348,6 +402,10 @@ function renderShotCard(shot: Shot, index: number): string {
       </div>
     </article>
   `;
+}
+
+function getShotCardWidth(duration: number): number {
+  return Math.max(184, Math.min(360, 150 + duration * 22));
 }
 
 function renderAddCard(): string {
@@ -370,13 +428,71 @@ function renderStage(shot: Shot, index: number): string {
 }
 
 function renderScrubTrack(total: number): string {
-  return state.project.shots
-    .map((shot) => {
+  const videoClips = state.project.shots
+    .map((shot, index) => {
       const width = total > 0 ? Math.max(6, (shot.duration / total) * 100) : 0;
       const playing = shot.id === state.playingShotId ? " playing" : "";
-      return `<div class="scrub-segment${playing}" style="width:${width}%"></div>`;
+      const selected = shot.id === state.selectedShotId ? " selected" : "";
+      return `
+        <div class="timeline-clip video-clip${playing}${selected}" style="width:${width}%" data-timeline-shot="${shot.id}">
+          <button class="timeline-trim-handle left" data-timeline-left-handle="${shot.id}" type="button" aria-label="片段起點"></button>
+          <div class="timeline-thumb">${shotSvg(shot, "version")}</div>
+          <div class="timeline-clip-label">
+            <strong>${index + 1}. ${escapeHtml(shot.title)}</strong>
+            <span>${shot.duration}s</span>
+          </div>
+          <button class="timeline-trim-handle right" data-timeline-right-handle="${shot.id}" type="button" aria-label="拖拉調整片段終點"></button>
+        </div>
+      `;
     })
     .join("");
+  const left = total > 0 ? (playheadSeconds / total) * 100 : 0;
+  const extraTracks = state.project.timeline.map((track) => renderTimelineTrack(track, total)).join("");
+  return `
+    <div class="timeline-header">
+      <span>時間線</span>
+      <strong>${Math.round(playheadSeconds)}s / ${total}s</strong>
+    </div>
+    <div class="timeline-body">
+      <div class="timeline-ruler">${renderTimelineTicks(total)}</div>
+      <div class="timeline-track">
+        <div class="track-label">影片</div>
+        <div class="track-lane video-lane">${videoClips}</div>
+      </div>
+      ${extraTracks}
+      <button class="playhead" data-playhead type="button" style="--playhead-left:${left}%" aria-label="拖曳播放頭"></button>
+    </div>
+  `;
+}
+
+function renderTimelineTrack(track: TimelineTrack, total: number): string {
+  const clips = track.clips
+    .map((clip) => {
+      const left = total > 0 ? (clip.startSeconds / total) * 100 : 0;
+      const width = total > 0 ? Math.max(4, (clip.durationSeconds / total) * 100) : 0;
+      return `
+        <div class="timeline-clip ${track.kind}-clip" style="left:${left}%; width:${width}%">
+          <strong>${escapeHtml(clip.title)}</strong>
+          <span>${clip.durationSeconds}s</span>
+        </div>
+      `;
+    })
+    .join("");
+  return `
+    <div class="timeline-track">
+      <div class="track-label">${escapeHtml(track.label)}</div>
+      <div class="track-lane ${track.kind}-lane">${clips}</div>
+    </div>
+  `;
+}
+
+function renderTimelineTicks(total: number): string {
+  const tickCount = Math.max(2, Math.ceil(total / 2) + 1);
+  return Array.from({ length: tickCount }, (_, index) => {
+    const second = Math.min(total, index * 2);
+    const left = total > 0 ? (second / total) * 100 : 0;
+    return `<span style="left:${left}%">${second}s</span>`;
+  }).join("");
 }
 
 function renderCandidates(shot: Shot): string {
@@ -413,6 +529,104 @@ function renderProviderSettings(): void {
 }
 
 function bindDynamicInteractions(): void {
+  els.rhythmTrack.querySelectorAll<HTMLButtonElement>("[data-timeline-right-handle]").forEach((handle) => {
+    handle.addEventListener("click", (event) => event.stopPropagation());
+    handle.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const shotId = handle.dataset.timelineRightHandle ?? "";
+      const shot = state.project.shots.find((item) => item.id === shotId);
+      if (!shot) return;
+      activeTrim = {
+        shotId,
+        startX: event.clientX,
+        startDuration: shot.duration,
+      };
+      handle.setPointerCapture(event.pointerId);
+      state = { ...state, selectedShotId: shotId };
+    });
+    handle.addEventListener("pointermove", (event) => {
+      if (!activeTrim) return;
+      event.preventDefault();
+      const deltaSeconds = Math.round((event.clientX - activeTrim.startX) / 34);
+      const nextDuration = Math.max(1, Math.min(20, activeTrim.startDuration + deltaSeconds));
+      setShotDuration(activeTrim.shotId, nextDuration, false);
+      updateTimelineDurationPreview(activeTrim.shotId, nextDuration);
+    });
+    handle.addEventListener("pointerup", (event) => {
+      if (!activeTrim) return;
+      event.preventDefault();
+      activeTrim = null;
+      render();
+    });
+    handle.addEventListener("pointercancel", () => {
+      activeTrim = null;
+      render();
+    });
+  });
+
+  els.rhythmTrack.querySelectorAll<HTMLButtonElement>("[data-timeline-left-handle]").forEach((handle) => {
+    handle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      state = { ...state, selectedShotId: handle.dataset.timelineLeftHandle ?? state.selectedShotId };
+      render();
+    });
+  });
+
+  const playhead = els.rhythmTrack.querySelector<HTMLButtonElement>("[data-playhead]");
+  playhead?.addEventListener("click", (event) => event.stopPropagation());
+  playhead?.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    playhead.setPointerCapture(event.pointerId);
+    updatePlayheadFromClientX(event.clientX, false);
+  });
+  playhead?.addEventListener("pointermove", (event) => {
+    if (!playhead.hasPointerCapture(event.pointerId)) return;
+    event.preventDefault();
+    updatePlayheadFromClientX(event.clientX, false);
+  });
+  playhead?.addEventListener("pointerup", (event) => {
+    if (!playhead.hasPointerCapture(event.pointerId)) return;
+    playhead.releasePointerCapture(event.pointerId);
+    updatePlayheadFromClientX(event.clientX, true);
+  });
+
+  els.shotRail.querySelectorAll<HTMLButtonElement>("[data-trim-handle]").forEach((handle) => {
+    handle.addEventListener("click", (event) => event.stopPropagation());
+    handle.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const shotId = handle.dataset.trimHandle ?? "";
+      const shot = state.project.shots.find((item) => item.id === shotId);
+      if (!shot) return;
+      activeTrim = {
+        shotId,
+        startX: event.clientX,
+        startDuration: shot.duration,
+      };
+      handle.setPointerCapture(event.pointerId);
+      state = { ...state, selectedShotId: shotId };
+    });
+    handle.addEventListener("pointermove", (event) => {
+      if (!activeTrim) return;
+      event.preventDefault();
+      const deltaSeconds = Math.round((event.clientX - activeTrim.startX) / 34);
+      const nextDuration = Math.max(1, Math.min(20, activeTrim.startDuration + deltaSeconds));
+      setShotDuration(activeTrim.shotId, nextDuration, false);
+    });
+    handle.addEventListener("pointerup", (event) => {
+      if (!activeTrim) return;
+      event.preventDefault();
+      activeTrim = null;
+      render();
+    });
+    handle.addEventListener("pointercancel", () => {
+      activeTrim = null;
+      render();
+    });
+  });
+
   els.shotRail.querySelectorAll<HTMLElement>(".storyboard-card[data-shot]").forEach((card) => {
     card.draggable = true;
     card.addEventListener("click", (event) => {
@@ -499,17 +713,35 @@ function updateShotById(shotId: string, patch: Partial<Shot>): void {
 }
 
 function adjustDuration(id: string, delta: number): void {
+  const shot = state.project.shots.find((item) => item.id === id);
+  if (!shot) return;
+  setShotDuration(id, Math.max(1, Math.min(20, Number(shot.duration) + delta)));
+}
+
+function setShotDuration(id: string, duration: number, shouldRender = true): void {
   state = {
     ...state,
     selectedShotId: id,
     project: {
       ...state.project,
-      shots: state.project.shots.map((shot) =>
-        shot.id === id ? { ...shot, duration: Math.max(1, Math.min(20, Number(shot.duration) + delta)) } : shot,
-      ),
+      shots: state.project.shots.map((shot) => (shot.id === id ? { ...shot, duration } : shot)),
     },
   };
-  render();
+  if (shouldRender) render();
+  if (!shouldRender) {
+    const card = els.shotRail.querySelector<HTMLElement>(`.storyboard-card[data-shot="${CSS.escape(id)}"]`);
+    const durationLabel = card?.querySelector<HTMLElement>(".duration");
+    if (card) card.style.setProperty("--shot-card-width", `${getShotCardWidth(duration)}px`);
+    if (durationLabel) durationLabel.textContent = `◷ ${duration} 秒`;
+    els.totalDuration.textContent = `${totalDuration()}s`;
+    els.shotDuration.value = String(duration);
+  }
+}
+
+function updateTimelineDurationPreview(id: string, duration: number): void {
+  const clip = els.rhythmTrack.querySelector<HTMLElement>(`.timeline-clip[data-timeline-shot="${CSS.escape(id)}"]`);
+  const durationText = clip?.querySelector<HTMLElement>(".timeline-clip-label span");
+  if (durationText) durationText.textContent = `${duration}s`;
 }
 
 function moveShot(id: string, direction: number): void {
@@ -542,6 +774,7 @@ function playPreview(startAtSeconds = 0, onlySelected = false): void {
   const sequence = onlySelected ? [selected] : state.project.shots;
   const total = onlySelected ? selected.duration : totalDuration();
   const start = Math.max(0, Math.min(total, Number(startAtSeconds || 0)));
+  playheadSeconds = onlySelected ? getShotStartSeconds(selected.id) : start;
   if (start >= total) return;
 
   let elapsed = 0;
@@ -562,6 +795,7 @@ function playPreview(startAtSeconds = 0, onlySelected = false): void {
     }
 
     const current = sequence[index];
+    playheadSeconds = onlySelected ? getShotStartSeconds(current.id) : elapsed;
     state = { ...state, playingShotId: current.id, selectedShotId: current.id };
     render();
 
@@ -578,9 +812,14 @@ function playPreview(startAtSeconds = 0, onlySelected = false): void {
 }
 
 function locateTime(event: MouseEvent): void {
+  updatePlayheadFromClientX(event.clientX, true);
+}
+
+function updatePlayheadFromClientX(clientX: number, shouldRender: boolean): void {
   const rect = els.rhythmTrack.getBoundingClientRect();
-  const ratio = rect.width > 0 ? (event.clientX - rect.left) / rect.width : 0;
+  const ratio = rect.width > 0 ? (clientX - rect.left) / rect.width : 0;
   const target = Math.max(0, Math.min(totalDuration(), totalDuration() * ratio));
+  playheadSeconds = target;
   let elapsed = 0;
   const found = state.project.shots.find((shot) => {
     const nextElapsed = elapsed + shot.duration;
@@ -591,7 +830,29 @@ function locateTime(event: MouseEvent): void {
   if (!found) return;
   state = { ...state, selectedShotId: found.id };
   els.playFrom.value = String(Math.round(target));
-  render();
+  if (shouldRender) {
+    render();
+  } else {
+    const total = totalDuration();
+    const playhead = els.rhythmTrack.querySelector<HTMLElement>("[data-playhead]");
+    if (playhead && total > 0) playhead.style.setProperty("--playhead-left", `${(target / total) * 100}%`);
+    els.rhythmTrack.querySelectorAll<HTMLElement>(".timeline-clip[data-timeline-shot]").forEach((segment) => {
+      segment.classList.toggle("selected", segment.dataset.timelineShot === found.id);
+    });
+  }
+}
+
+function getShotStartSeconds(shotId: string): number {
+  let elapsed = 0;
+  for (const shot of state.project.shots) {
+    if (shot.id === shotId) return elapsed;
+    elapsed += shot.duration;
+  }
+  return 0;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 
 function saveProviderSettings(): void {
@@ -743,6 +1004,8 @@ els.playPreview.addEventListener("click", () => playPreview(0, false));
 els.playSelected.addEventListener("click", () => playPreview(0, true));
 els.playFromTime.addEventListener("click", () => playPreview(Number(els.playFrom.value), false));
 els.rhythmTrack.addEventListener("click", locateTime);
+els.openStoryboardDialog.addEventListener("click", () => els.storyboardDialog.showModal());
+els.closeStoryboardDialog.addEventListener("click", () => els.storyboardDialog.close());
 
 function openProviderSettings(): void {
   renderProviderSettings();

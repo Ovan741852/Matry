@@ -45,6 +45,22 @@ export type Project = {
     style: string;
     shots: Shot[];
     assets: AssetRef[];
+    timelineTracks: TimelineTrack[];
+};
+export type TimelineTrackKind = "video" | "music" | "subtitle";
+export type TimelineClip = {
+    id: string;
+    title: string;
+    startSeconds: number;
+    durationSeconds: number;
+    sourceShotId?: string;
+    assetId?: string;
+};
+export type TimelineTrack = {
+    id: string;
+    kind: TimelineTrackKind;
+    label: string;
+    clips: TimelineClip[];
 };
 export declare function getProjectDurationSeconds(project: Project): number;
 export declare function getShotById(project: Project, shotId: string): Shot | undefined;
