@@ -1,175 +1,224 @@
 const modeLabels = {
-  text: "只用文字",
-  frames: "起點到終點",
+  text: "用文字生成",
+  frames: "首幀到尾幀生成",
   reference: "參考圖生成",
+  import: "匯入影片",
 };
 
 const palette = [
-  ["#3157d8", "#e8752c"],
-  ["#b91c52", "#1ba7d8"],
-  ["#4338ca", "#78a22f"],
-  ["#0f766e", "#ca8a04"],
-  ["#7c3aed", "#0f766e"],
-  ["#b45309", "#2563eb"],
+  ["#27150e", "#b45309"],
+  ["#080808", "#b7791f"],
+  ["#111827", "#d4a017"],
+  ["#0f172a", "#be123c"],
+  ["#123026", "#e8752c"],
 ];
 
-let scenes = [
-  {
-    id: crypto.randomUUID(),
-    title: "開場吸引",
-    purpose: "讓觀眾立刻知道主角是冰涼可樂。",
-    shots: [
-      shot("瓶蓋打開", 2, "frames", "可樂瓶近拍，瓶蓋被打開，瓶口有第一道氣泡衝出。", 1, true),
-      shot("氣泡噴出", 4, "reference", "無數氣泡從瓶口噴出，畫面有清涼、刺激、慢動作的感覺。", 2, false),
-    ],
-  },
-  {
-    id: crypto.randomUUID(),
-    title: "結尾記憶",
-    purpose: "把商品停在最好看的主視覺。",
-    shots: [
-      shot("結尾定格", 3, "text", "可樂瓶站在冰塊上，背景明亮，最後定格成廣告主視覺。", 3, true),
-    ],
-  },
+let shots = [
+  createShot("瓶蓋打開", 2, "frames", "手指旋開冰涼可樂瓶蓋，瓶口冒出第一道氣泡。", 0, "done"),
+  createShot("氣泡噴出", 4, "frames", "大量氣泡從瓶口噴出，慢動作，水珠飛濺，背景為深色攝影棚。", 1, "generating"),
+  createShot("結尾標語", 3, "text", "可樂瓶站在冰塊上，畫面出現醒目標語，最後定格成廣告主視覺。", 2, "done"),
 ];
 
-let activeSceneId = scenes[0].id;
-let activeShotId = scenes[0].shots[0].id;
+let selectedShotId = shots[1].id;
 let playingShotId = null;
 let previewTimer = null;
-let activeTab = "content";
 
 const els = {
-  sceneCount: document.querySelector("#sceneCount"),
-  shotCount: document.querySelector("#shotCount"),
   totalDuration: document.querySelector("#totalDuration"),
-  sceneList: document.querySelector("#sceneList"),
-  activeSceneLabel: document.querySelector("#activeSceneLabel"),
-  activeSceneTitle: document.querySelector("#activeSceneTitle"),
+  shotCount: document.querySelector("#shotCount"),
   shotRail: document.querySelector("#shotRail"),
   stageImage: document.querySelector("#stageImage"),
-  stageKicker: document.querySelector("#stageKicker"),
-  stageTitle: document.querySelector("#stageTitle"),
-  stagePrompt: document.querySelector("#stagePrompt"),
+  stageTimecode: document.querySelector("#stageTimecode"),
   rhythmTrack: document.querySelector("#rhythmTrack"),
+  playPreview: document.querySelector("#playPreview"),
+  playSelected: document.querySelector("#playSelected"),
+  playFrom: document.querySelector("#playFrom"),
+  playFromTime: document.querySelector("#playFromTime"),
+  settingsTitle: document.querySelector("#settingsTitle"),
   shotTitle: document.querySelector("#shotTitle"),
   shotDuration: document.querySelector("#shotDuration"),
   shotPrompt: document.querySelector("#shotPrompt"),
+  promptCount: document.querySelector("#promptCount"),
   storyboardPreview: document.querySelector("#storyboardPreview"),
   candidateList: document.querySelector("#candidateList"),
-  addScene: document.querySelector("#addScene"),
-  addShot: document.querySelector("#addShot"),
-  playPreview: document.querySelector("#playPreview"),
   generateStoryboard: document.querySelector("#generateStoryboard"),
-  replaceStoryboard: document.querySelector("#replaceStoryboard"),
   mockGenerateVideo: document.querySelector("#mockGenerateVideo"),
-  deleteShot: document.querySelector("#deleteShot"),
+  trimShorter: document.querySelector("#trimShorter"),
+  trimLonger: document.querySelector("#trimLonger"),
 };
 
-function shot(title, duration, mode, prompt, imageSeed, done) {
+function createShot(title, duration, mode, prompt, imageSeed, status = "draft") {
   return {
     id: crypto.randomUUID(),
     title,
     duration,
     mode,
     prompt,
-    purpose: "",
     imageSeed,
-    candidates: done ? ["版本 A"] : [],
-    selectedCandidate: done ? 0 : null,
+    status,
+    candidates:
+      status === "done"
+        ? [
+            { id: crypto.randomUUID(), name: "V1", status: "未生成", seed: imageSeed + 1 },
+            { id: crypto.randomUUID(), name: "V2", status: "已選", seed: imageSeed + 2 },
+            { id: crypto.randomUUID(), name: "V3", status: "未生成", seed: imageSeed + 3 },
+            { id: crypto.randomUUID(), name: "V4", status: "未生成", seed: imageSeed + 4 },
+          ]
+        : [],
+    selectedCandidateIndex: status === "done" ? 1 : null,
   };
 }
 
-function activeScene() {
-  return scenes.find((scene) => scene.id === activeSceneId) ?? scenes[0];
-}
-
-function activeShot() {
-  return activeScene().shots.find((item) => item.id === activeShotId) ?? activeScene().shots[0];
-}
-
-function allShots() {
-  return scenes.flatMap((scene) => scene.shots.map((item) => ({ ...item, sceneTitle: scene.title })));
+function selectedShot() {
+  return shots.find((shot) => shot.id === selectedShotId) ?? shots[0];
 }
 
 function totalDuration() {
-  return allShots().reduce((sum, item) => sum + Number(item.duration || 0), 0);
-}
-
-function sceneDuration(scene) {
-  return scene.shots.reduce((sum, item) => sum + Number(item.duration || 0), 0);
+  return shots.reduce((sum, shot) => sum + Number(shot.duration || 0), 0);
 }
 
 function render() {
-  const scene = activeScene();
-  const item = activeShot();
   const total = totalDuration();
-  const shotCount = allShots().length;
+  const current = selectedShot();
 
-  els.sceneCount.textContent = scenes.length;
-  els.shotCount.textContent = shotCount;
   els.totalDuration.textContent = `${total}s`;
-  els.activeSceneLabel.textContent = `${scene.shots.length} 格 / ${sceneDuration(scene)}s`;
-  els.activeSceneTitle.textContent = scene.title;
+  els.shotCount.textContent = `${shots.length} 個片段`;
+  els.playFrom.max = total;
+  els.shotRail.innerHTML = shots.map(renderShotCard).join("") + renderAddCard();
+  els.stageImage.innerHTML = renderStage(current);
+  els.stageTimecode.textContent = `00:01 / 00:${String(current.duration).padStart(2, "0")}`;
+  els.rhythmTrack.innerHTML = renderScrubTrack(total);
+  els.settingsTitle.textContent = `Shot ${shots.findIndex((shot) => shot.id === current.id) + 1} 設定`;
+  els.shotTitle.value = current.title;
+  els.shotDuration.value = current.duration;
+  els.shotPrompt.value = current.prompt;
+  els.promptCount.textContent = `${current.prompt.length} / 200`;
+  els.storyboardPreview.innerHTML = shotSvg(current, "sketch");
 
-  renderScenes();
-  renderShots(scene);
-  renderStage(item);
-  renderInspector(item);
-  renderRhythm(total);
-  bindTabs();
+  document.querySelectorAll("input[name='mode']").forEach((input) => {
+    input.checked = input.value === current.mode;
+  });
+
+  renderCandidates(current);
+  bindShotCards();
 }
 
-function renderScenes() {
-  els.sceneList.innerHTML = scenes
-    .map((scene, index) => {
-      const activeClass = scene.id === activeSceneId ? " active" : "";
+function renderShotCard(shot, index) {
+  const active = shot.id === selectedShotId ? " active" : "";
+  const playing = shot.id === playingShotId ? " playing" : "";
+  const statusClass = shot.status === "generating" ? " generating" : "";
+  const statusText = shot.status === "generating" ? "⟳ 生成中" : shot.status === "done" ? "✓ 已生成" : "○ 草稿";
+
+  return `
+    <article class="storyboard-card${active}${playing}" data-shot="${shot.id}">
+      <div class="shot-image">
+        ${shotSvg(shot, "card")}
+        <span class="status-badge${statusClass}">${statusText}</span>
+        <span class="shot-number">Shot ${index + 1}</span>
+      </div>
+      <div class="card-title-row">
+        <strong>${escapeHtml(shot.title)}</strong>
+        <span class="duration">◷ ${shot.duration} 秒</span>
+      </div>
+      <div class="quick-edits">
+        <button data-action="shorter" data-shot="${shot.id}" type="button">-1s</button>
+        <button data-action="left" data-shot="${shot.id}" type="button">←</button>
+        <button data-action="right" data-shot="${shot.id}" type="button">→</button>
+        <button data-action="longer" data-shot="${shot.id}" type="button">+1s</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderAddCard() {
+  return `
+    <button id="addShotCard" class="storyboard-card add-card" type="button">
+      <strong>+</strong>
+      <span>新增片段</span>
+    </button>
+  `;
+}
+
+function renderStage(shot) {
+  return `
+    ${shotSvg(shot, "stage")}
+    <div class="stage-overlay">
+      <span>Shot ${shots.findIndex((item) => item.id === shot.id) + 1}</span>
+      <strong>${escapeHtml(shot.title)}</strong>
+    </div>
+  `;
+}
+
+function renderScrubTrack(total) {
+  return shots
+    .map((shot) => {
+      const width = total > 0 ? Math.max(6, (shot.duration / total) * 100) : 0;
+      const playing = shot.id === playingShotId ? " playing" : "";
+      return `<div class="scrub-segment${playing}" style="width:${width}%"></div>`;
+    })
+    .join("");
+}
+
+function renderCandidates(shot) {
+  if (shot.candidates.length === 0) {
+    els.candidateList.innerHTML = `
+      <button class="version-card empty-version" type="button">
+        <div class="version-thumb">${shotSvg(shot, "version")}</div>
+        <div class="version-meta"><span>尚未生成</span><span>草稿</span></div>
+      </button>
+    `;
+    return;
+  }
+
+  els.candidateList.innerHTML = shot.candidates
+    .map((candidate, index) => {
+      const selected = shot.selectedCandidateIndex === index ? " selected" : "";
       return `
-        <button class="scene-item${activeClass}" data-scene="${scene.id}" type="button">
-          <strong>${index + 1}. ${escapeHtml(scene.title)}</strong>
-          <span>${scene.shots.length} 格分鏡 · ${sceneDuration(scene)}s</span>
+        <button class="version-card${selected}" data-version="${index}" type="button">
+          <div class="version-thumb">${shotSvg({ ...shot, imageSeed: candidate.seed }, "version")}</div>
+          <div class="version-meta">
+            <span>${candidate.name}</span>
+            <span>${shot.selectedCandidateIndex === index ? "已選" : candidate.status}</span>
+          </div>
         </button>
       `;
     })
     .join("");
 
-  els.sceneList.querySelectorAll("[data-scene]").forEach((button) => {
+  els.candidateList.querySelectorAll("[data-version]").forEach((button) => {
     button.addEventListener("click", () => {
-      activeSceneId = button.dataset.scene;
-      activeShotId = activeScene().shots[0].id;
-      render();
+      updateSelected({ selectedCandidateIndex: Number(button.dataset.version), status: "done" });
     });
   });
 }
 
-function renderShots(scene) {
-  els.shotRail.innerHTML = scene.shots
-    .map((item, index) => {
-      const activeClass = item.id === activeShotId ? " active" : "";
-      const playingClass = item.id === playingShotId ? " playing" : "";
-      return `
-        <article class="shot-card${activeClass}${playingClass}" data-shot="${item.id}">
-          <div class="shot-thumb">${shotSvg(item)}</div>
-          <div class="shot-row">
-            <div class="shot-name">${index + 1}. ${escapeHtml(item.title)}</div>
-            <div class="duration">${item.duration}s</div>
-          </div>
-          <div class="mode">${modeLabels[item.mode]}</div>
-          <div class="mini-actions">
-            <button data-action="left" data-shot="${item.id}" type="button">←</button>
-            <button data-action="duplicate" data-shot="${item.id}" type="button">複</button>
-            <button data-action="right" data-shot="${item.id}" type="button">→</button>
-          </div>
-        </article>
-      `;
-    })
-    .join("");
-
-  els.shotRail.querySelectorAll(".shot-card").forEach((card) => {
+function bindShotCards() {
+  els.shotRail.querySelectorAll(".storyboard-card[data-shot]").forEach((card) => {
+    card.draggable = true;
     card.addEventListener("click", (event) => {
-      if (event.target.closest("button")) return;
-      activeShotId = card.dataset.shot;
+      if (event.target.closest("[data-action]")) return;
+      selectedShotId = card.dataset.shot;
       render();
+    });
+    card.addEventListener("dragstart", (event) => {
+      event.dataTransfer.setData("text/plain", card.dataset.shot);
+      event.dataTransfer.effectAllowed = "move";
+      card.classList.add("dragging");
+    });
+    card.addEventListener("dragend", () => {
+      card.classList.remove("dragging");
+      clearDropMarkers();
+    });
+    card.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      card.classList.add("drop-before");
+    });
+    card.addEventListener("dragleave", () => card.classList.remove("drop-before"));
+    card.addEventListener("drop", (event) => {
+      event.preventDefault();
+      const draggedId = event.dataTransfer.getData("text/plain");
+      card.classList.remove("drop-before");
+      reorderShot(draggedId, card.dataset.shot);
     });
   });
 
@@ -177,164 +226,82 @@ function renderShots(scene) {
     button.addEventListener("click", () => {
       const id = button.dataset.shot;
       const action = button.dataset.action;
+      if (action === "shorter") adjustDuration(id, -1);
+      if (action === "longer") adjustDuration(id, 1);
       if (action === "left") moveShot(id, -1);
       if (action === "right") moveShot(id, 1);
-      if (action === "duplicate") duplicateShot(id);
-    });
-  });
-}
-
-function renderStage(item) {
-  els.stageImage.innerHTML = shotSvg(item, true);
-  els.stageKicker.textContent =
-    item.id === playingShotId ? `播放中 · ${item.duration}s` : `${modeLabels[item.mode]} · ${item.duration}s`;
-  els.stageTitle.textContent = item.title;
-  els.stagePrompt.textContent = item.prompt;
-  els.storyboardPreview.innerHTML = shotSvg(item, true);
-}
-
-function renderInspector(item) {
-  els.shotTitle.value = item.title;
-  els.shotDuration.value = item.duration;
-  els.shotPrompt.value = item.prompt;
-
-  document.querySelectorAll("input[name='mode']").forEach((input) => {
-    input.checked = input.value === item.mode;
-  });
-
-  renderCandidates(item);
-}
-
-function renderCandidates(item) {
-  if (item.candidates.length === 0) {
-    els.candidateList.innerHTML = `<div class="candidate">尚未產生影片草稿</div>`;
-    return;
-  }
-
-  els.candidateList.innerHTML = item.candidates
-    .map((name, index) => {
-      const selectedClass = item.selectedCandidate === index ? " selected" : "";
-      const label = item.selectedCandidate === index ? "使用中" : "選用";
-      return `
-        <div class="candidate${selectedClass}">
-          <span>${escapeHtml(name)}</span>
-          <button data-candidate="${index}" type="button">${label}</button>
-        </div>
-      `;
-    })
-    .join("");
-
-  els.candidateList.querySelectorAll("[data-candidate]").forEach((button) => {
-    button.addEventListener("click", () => {
-      updateActiveShot({ selectedCandidate: Number(button.dataset.candidate) });
-    });
-  });
-}
-
-function renderRhythm(total) {
-  els.rhythmTrack.innerHTML = allShots()
-    .map((item) => {
-      const width = total > 0 ? Math.max(5, (item.duration / total) * 100) : 0;
-      const playingClass = item.id === playingShotId ? " playing" : "";
-      return `<div class="rhythm-segment${playingClass}" style="width:${width}%">${item.duration}s</div>`;
-    })
-    .join("");
-}
-
-function bindTabs() {
-  document.querySelectorAll(".tab").forEach((tab) => {
-    tab.classList.toggle("active", tab.dataset.tab === activeTab);
-    tab.addEventListener("click", () => {
-      activeTab = tab.dataset.tab;
-      document.querySelectorAll(".tab").forEach((item) => item.classList.toggle("active", item.dataset.tab === activeTab));
-      document.querySelectorAll(".tab-panel").forEach((panel) => {
-        panel.classList.toggle("active", panel.dataset.panel === activeTab);
-      });
     });
   });
 
-  document.querySelectorAll(".tab-panel").forEach((panel) => {
-    panel.classList.toggle("active", panel.dataset.panel === activeTab);
-  });
+  document.querySelector("#addShotCard").addEventListener("click", addShot);
 }
 
-function addScene() {
-  const newScene = {
-    id: crypto.randomUUID(),
-    title: `新段落 ${scenes.length + 1}`,
-    purpose: "",
-    shots: [shot("新分鏡", 3, "text", "描述這一格畫面要發生什麼。", randomSeed(), false)],
-  };
-  scenes = [...scenes, newScene];
-  activeSceneId = newScene.id;
-  activeShotId = newScene.shots[0].id;
-  render();
+function clearDropMarkers() {
+  els.shotRail.querySelectorAll(".drop-before").forEach((item) => item.classList.remove("drop-before"));
 }
 
 function addShot() {
-  const scene = activeScene();
-  const newShot = shot(`新分鏡 ${scene.shots.length + 1}`, 3, "text", "描述這一格畫面要發生什麼。", randomSeed(), false);
-  scenes = scenes.map((item) => (item.id === scene.id ? { ...item, shots: [...item.shots, newShot] } : item));
-  activeShotId = newShot.id;
+  const newShot = createShot("新片段", 3, "text", "描述這一段會出現的畫面、動作和節奏。", randomSeed(), "draft");
+  shots = [...shots, newShot];
+  selectedShotId = newShot.id;
   render();
 }
 
-function updateActiveShot(patch) {
-  scenes = scenes.map((scene) => {
-    if (scene.id !== activeSceneId) return scene;
-    return {
-      ...scene,
-      shots: scene.shots.map((item) => (item.id === activeShotId ? { ...item, ...patch } : item)),
-    };
-  });
+function updateSelected(patch) {
+  shots = shots.map((shot) => (shot.id === selectedShotId ? { ...shot, ...patch } : shot));
+  render();
+}
+
+function adjustDuration(id, delta) {
+  shots = shots.map((shot) =>
+    shot.id === id ? { ...shot, duration: Math.max(1, Math.min(20, Number(shot.duration) + delta)) } : shot,
+  );
+  selectedShotId = id;
   render();
 }
 
 function moveShot(id, direction) {
-  const scene = activeScene();
-  const index = scene.shots.findIndex((item) => item.id === id);
+  const index = shots.findIndex((shot) => shot.id === id);
   const nextIndex = index + direction;
-  if (index < 0 || nextIndex < 0 || nextIndex >= scene.shots.length) return;
-  const nextShots = [...scene.shots];
-  const [item] = nextShots.splice(index, 1);
-  nextShots.splice(nextIndex, 0, item);
-  scenes = scenes.map((candidate) => (candidate.id === scene.id ? { ...candidate, shots: nextShots } : candidate));
-  activeShotId = id;
+  if (index < 0 || nextIndex < 0 || nextIndex >= shots.length) return;
+  const nextShots = [...shots];
+  const [shot] = nextShots.splice(index, 1);
+  nextShots.splice(nextIndex, 0, shot);
+  shots = nextShots;
+  selectedShotId = id;
   render();
 }
 
-function duplicateShot(id) {
-  const scene = activeScene();
-  const index = scene.shots.findIndex((item) => item.id === id);
-  if (index < 0) return;
-  const copy = {
-    ...scene.shots[index],
-    id: crypto.randomUUID(),
-    title: `${scene.shots[index].title} 複製`,
-    imageSeed: scene.shots[index].imageSeed + 7,
-    candidates: [],
-    selectedCandidate: null,
-  };
-  const nextShots = [...scene.shots.slice(0, index + 1), copy, ...scene.shots.slice(index + 1)];
-  scenes = scenes.map((candidate) => (candidate.id === scene.id ? { ...candidate, shots: nextShots } : candidate));
-  activeShotId = copy.id;
+function reorderShot(draggedId, targetId) {
+  if (!draggedId || draggedId === targetId) return;
+  const from = shots.findIndex((shot) => shot.id === draggedId);
+  const to = shots.findIndex((shot) => shot.id === targetId);
+  if (from < 0 || to < 0) return;
+  const nextShots = [...shots];
+  const [shot] = nextShots.splice(from, 1);
+  const insertAt = from < to ? to - 1 : to;
+  nextShots.splice(insertAt, 0, shot);
+  shots = nextShots;
+  selectedShotId = draggedId;
   render();
 }
 
-function deleteActiveShot() {
-  const scene = activeScene();
-  if (scene.shots.length <= 1) return;
-  const index = scene.shots.findIndex((item) => item.id === activeShotId);
-  const nextShots = scene.shots.filter((item) => item.id !== activeShotId);
-  scenes = scenes.map((candidate) => (candidate.id === scene.id ? { ...candidate, shots: nextShots } : candidate));
-  activeShotId = nextShots[Math.max(0, index - 1)].id;
-  render();
-}
-
-function playPreview() {
+function playPreview(startAtSeconds = 0, onlySelected = false) {
   clearTimeout(previewTimer);
-  const sequence = allShots();
-  let index = 0;
+  const sequence = onlySelected ? [selectedShot()] : shots;
+  const total = onlySelected ? selectedShot().duration : totalDuration();
+  const start = Math.max(0, Math.min(total, Number(startAtSeconds || 0)));
+  if (start >= total) return;
+
+  let elapsed = 0;
+  let index = sequence.findIndex((shot) => {
+    const nextElapsed = elapsed + shot.duration;
+    const found = start < nextElapsed;
+    if (!found) elapsed = nextElapsed;
+    return found;
+  });
+  const startIndex = index;
+  if (index < 0) return;
 
   const next = () => {
     if (index >= sequence.length) {
@@ -344,41 +311,71 @@ function playPreview() {
     }
 
     const current = sequence[index];
-    const owner = scenes.find((scene) => scene.shots.some((item) => item.id === current.id));
     playingShotId = current.id;
-    activeSceneId = owner.id;
-    activeShotId = current.id;
+    selectedShotId = current.id;
     render();
 
+    const alreadyInsideShot = index === startIndex ? Math.max(0, start - elapsed) : 0;
+    const remaining = Math.max(0.4, current.duration - alreadyInsideShot);
     previewTimer = setTimeout(() => {
+      elapsed += current.duration;
       index += 1;
       next();
-    }, Math.max(600, current.duration * 420));
+    }, Math.max(600, remaining * 420));
   };
 
   next();
 }
 
-function shotSvg(item, large = false) {
-  const [start, end] = palette[item.imageSeed % palette.length];
-  const title = escapeHtml(item.title);
-  const prompt = escapeHtml(item.prompt.split("，")[0] || item.prompt);
-  const titleSize = large ? 32 : 24;
-  const promptSize = large ? 18 : 13;
+function locateTime(seconds) {
+  const target = Math.max(0, Math.min(totalDuration(), Number(seconds || 0)));
+  let elapsed = 0;
+  const found = shots.find((shot) => {
+    const nextElapsed = elapsed + shot.duration;
+    const isInside = target < nextElapsed;
+    if (!isInside) elapsed = nextElapsed;
+    return isInside;
+  });
+  if (!found) return;
+  selectedShotId = found.id;
+  els.playFrom.value = Math.round(target);
+  render();
+}
+
+function shotSvg(shot, size) {
+  const [start, end] = palette[shot.imageSeed % palette.length];
+  const title = escapeHtml(shot.title);
+  const prompt = escapeHtml(shot.prompt.split("，")[0] || shot.prompt);
+  const titleSize = size === "stage" ? 34 : size === "card" ? 18 : 14;
+  const promptSize = size === "stage" ? 18 : 10;
 
   return `
     <svg viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${title}">
       <defs>
-        <linearGradient id="g-${item.id}" x1="0" x2="1" y1="0" y2="1">
+        <linearGradient id="g-${shot.id}-${shot.imageSeed}" x1="0" x2="1" y1="0" y2="1">
           <stop offset="0%" stop-color="${start}" />
           <stop offset="100%" stop-color="${end}" />
         </linearGradient>
+        <radialGradient id="spark-${shot.id}-${shot.imageSeed}" cx="50%" cy="40%" r="60%">
+          <stop offset="0%" stop-color="rgba(255,255,255,.92)" />
+          <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+        </radialGradient>
       </defs>
-      <rect width="640" height="360" fill="url(#g-${item.id})" />
-      <circle cx="${120 + (item.imageSeed % 6) * 62}" cy="110" r="54" fill="rgba(255,255,255,.28)" />
-      <rect x="44" y="238" width="552" height="72" rx="12" fill="rgba(0,0,0,.34)" />
-      <text x="68" y="272" fill="white" font-size="${titleSize}" font-weight="850" font-family="Inter, sans-serif">${title}</text>
-      <text x="68" y="296" fill="rgba(255,255,255,.8)" font-size="${promptSize}" font-family="Inter, sans-serif">${prompt}</text>
+      <rect width="640" height="360" fill="url(#g-${shot.id}-${shot.imageSeed})" />
+      <circle cx="320" cy="140" r="118" fill="url(#spark-${shot.id}-${shot.imageSeed})" opacity=".55" />
+      <rect x="270" y="106" width="100" height="170" rx="24" fill="rgba(15,23,42,.62)" />
+      <rect x="286" y="76" width="68" height="42" rx="10" fill="rgba(255,255,255,.28)" />
+      <g fill="rgba(255,255,255,.7)">
+        <circle cx="210" cy="92" r="7" />
+        <circle cx="246" cy="62" r="5" />
+        <circle cx="410" cy="82" r="8" />
+        <circle cx="438" cy="128" r="4" />
+        <circle cx="188" cy="152" r="4" />
+        <circle cx="454" cy="198" r="6" />
+      </g>
+      <rect x="34" y="260" width="572" height="72" rx="12" fill="rgba(0,0,0,.42)" />
+      <text x="58" y="293" fill="white" font-size="${titleSize}" font-weight="850" font-family="Inter, sans-serif">${title}</text>
+      <text x="58" y="318" fill="rgba(255,255,255,.78)" font-size="${promptSize}" font-family="Inter, sans-serif">${prompt}</text>
     </svg>
   `;
 }
@@ -395,28 +392,46 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
-els.addScene.addEventListener("click", addScene);
-els.addShot.addEventListener("click", addShot);
-els.playPreview.addEventListener("click", playPreview);
-els.deleteShot.addEventListener("click", deleteActiveShot);
-
-els.shotTitle.addEventListener("input", () => updateActiveShot({ title: els.shotTitle.value }));
-els.shotPrompt.addEventListener("input", () => updateActiveShot({ prompt: els.shotPrompt.value }));
-els.shotDuration.addEventListener("input", () => {
-  updateActiveShot({ duration: Math.max(1, Math.min(20, Number(els.shotDuration.value || 1))) });
+els.playPreview.addEventListener("click", () => playPreview(0, false));
+els.playSelected.addEventListener("click", () => playPreview(0, true));
+els.playFromTime.addEventListener("click", () => playPreview(els.playFrom.value, false));
+els.rhythmTrack.addEventListener("click", (event) => {
+  const rect = els.rhythmTrack.getBoundingClientRect();
+  const ratio = rect.width > 0 ? (event.clientX - rect.left) / rect.width : 0;
+  locateTime(totalDuration() * ratio);
 });
+
+els.shotTitle.addEventListener("input", () => updateSelected({ title: els.shotTitle.value }));
+els.shotDuration.addEventListener("input", () => {
+  updateSelected({ duration: Math.max(1, Math.min(20, Number(els.shotDuration.value || 1))) });
+});
+els.shotPrompt.addEventListener("input", () => updateSelected({ prompt: els.shotPrompt.value }));
+els.trimShorter.addEventListener("click", () => adjustDuration(selectedShotId, -1));
+els.trimLonger.addEventListener("click", () => adjustDuration(selectedShotId, 1));
 
 document.querySelectorAll("input[name='mode']").forEach((input) => {
-  input.addEventListener("change", () => updateActiveShot({ mode: input.value }));
+  input.addEventListener("change", () => updateSelected({ mode: input.value }));
 });
 
-els.generateStoryboard.addEventListener("click", () => updateActiveShot({ imageSeed: activeShot().imageSeed + 1 }));
-els.replaceStoryboard.addEventListener("click", () => updateActiveShot({ imageSeed: randomSeed() }));
+document.querySelectorAll(".chip").forEach((chip) => {
+  chip.addEventListener("click", () => {
+    document.querySelectorAll(".chip").forEach((item) => item.classList.remove("active"));
+    chip.classList.add("active");
+  });
+});
+
+els.generateStoryboard.addEventListener("click", () => updateSelected({ imageSeed: randomSeed() }));
 els.mockGenerateVideo.addEventListener("click", () => {
-  const item = activeShot();
-  updateActiveShot({
-    candidates: [...item.candidates, `版本 ${String.fromCharCode(65 + item.candidates.length)}`],
-    selectedCandidate: item.candidates.length,
+  const shot = selectedShot();
+  updateSelected({
+    status: "done",
+    candidates: Array.from({ length: 4 }, (_, index) => ({
+      id: crypto.randomUUID(),
+      name: `V${index + 1}`,
+      status: index === 1 ? "已選" : "未生成",
+      seed: randomSeed(),
+    })),
+    selectedCandidateIndex: 1,
   });
 });
 

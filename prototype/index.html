@@ -9,95 +9,127 @@
   <body>
     <main class="app">
       <header class="topbar">
-        <div class="brand">
-          <span>Matry Prototype</span>
-          <input id="projectName" value="可樂廣告分鏡" aria-label="專案名稱" />
-        </div>
-        <div class="project-stats">
-          <div><span>段落</span><strong id="sceneCount">0</strong></div>
-          <div><span>分鏡</span><strong id="shotCount">0</strong></div>
-          <div><span>總長</span><strong id="totalDuration">0s</strong></div>
-        </div>
+        <section class="project-meta" aria-label="專案資訊">
+          <button class="ghost icon-only" type="button" aria-label="返回">←</button>
+          <div class="divider"></div>
+          <input id="projectName" class="project-title" value="可樂短廣告" aria-label="專案名稱" />
+          <button class="ghost icon-only" type="button" aria-label="編輯名稱">✎</button>
+          <div class="pill"><span>總長</span><strong id="totalDuration">0s</strong></div>
+          <div class="pill"><span>比例</span><strong>9:16</strong></div>
+          <div class="pill"><span>風格</span><strong>商業廣告</strong></div>
+        </section>
+        <section class="project-actions" aria-label="專案操作">
+          <button id="playPreview" class="button" type="button">▶ 播放預覽</button>
+          <button class="button" type="button">✦ 自動補齊故事</button>
+          <button class="button primary" type="button">⇧ 輸出影片</button>
+        </section>
       </header>
 
-      <section class="layout">
-        <aside class="scene-panel" aria-label="故事段落">
-          <div class="panel-head">
-            <div>
-              <h1>故事結構</h1>
-              <p>用段落整理節奏，每段底下放多格分鏡。</p>
-            </div>
-            <button id="addScene" type="button">新增段落</button>
+      <section class="storyboard-section" aria-label="Storyboard">
+        <div class="section-title">
+          <span class="section-icon">▥</span>
+          <h1>Storyboard</h1>
+          <span id="shotCount" class="muted"></span>
+        </div>
+        <div id="shotRail" class="storyboard-rail" aria-label="分鏡列"></div>
+      </section>
+
+      <section class="main-grid">
+        <section class="preview-panel" aria-label="預覽">
+          <nav class="panel-tabs" aria-label="預覽模式">
+            <button class="panel-tab" data-preview-tab="full" type="button">整支預覽</button>
+            <button class="panel-tab active" data-preview-tab="shot" type="button">片段預覽</button>
+          </nav>
+
+          <div class="video-stage" id="stageImage">
+            <div class="timecode" id="stageTimecode">00:00 / 00:00</div>
           </div>
-          <div id="sceneList" class="scene-list"></div>
-        </aside>
+          <div id="rhythmTrack" class="scrub-track" aria-label="時間軸"></div>
 
-        <section class="workbench" aria-label="分鏡工作區">
-          <div class="workbench-head">
-            <div>
-              <span id="activeSceneLabel">段落</span>
-              <h2 id="activeSceneTitle">選取段落</h2>
-            </div>
-            <div class="head-actions">
-              <button id="addShot" class="primary" type="button">新增分鏡</button>
-              <button id="playPreview" type="button">播放節奏</button>
-            </div>
+          <div class="preview-actions">
+            <button id="playSelected" class="button primary-outline" type="button">▶ 播放此段</button>
+            <button id="playFromTime" class="button" type="button">↔ 從指定秒數播</button>
+            <label class="play-from">
+              <span>從</span>
+              <input id="playFrom" type="number" min="0" step="1" value="0" />
+              <span>秒</span>
+            </label>
+            <button class="icon-button" type="button" aria-label="截圖">▣</button>
+            <button class="icon-button" type="button" aria-label="更多">⋯</button>
           </div>
 
-          <div id="shotRail" class="shot-rail" aria-label="分鏡列"></div>
-
-          <section class="preview-stage" aria-label="節奏預覽">
-            <div class="stage-image" id="stageImage"></div>
-            <div class="stage-copy">
-              <span id="stageKicker">目前分鏡</span>
-              <h3 id="stageTitle">選取一格分鏡</h3>
-              <p id="stagePrompt"></p>
+          <section class="versions" aria-label="版本">
+            <div class="versions-head">
+              <h2>版本</h2>
+              <div class="version-nav">
+                <button class="icon-button" type="button" aria-label="上一個">‹</button>
+                <button class="icon-button" type="button" aria-label="下一個">›</button>
+              </div>
             </div>
-            <div id="rhythmTrack" class="rhythm-track"></div>
+            <div id="candidateList" class="version-list"></div>
           </section>
         </section>
 
-        <aside class="inspector" aria-label="分鏡設定">
-          <div class="tabbar" role="tablist" aria-label="設定分頁">
-            <button class="tab active" data-tab="content" type="button">內容</button>
-            <button class="tab" data-tab="generate" type="button">生成</button>
-            <button class="tab" data-tab="media" type="button">素材</button>
-          </div>
+        <aside class="settings-panel" aria-label="片段設定">
+          <header class="settings-head">
+            <h2 id="settingsTitle">Shot 設定</h2>
+          </header>
 
-          <section class="tab-panel active" data-panel="content">
-            <label class="field">
-              <span>分鏡標題</span>
+          <div class="settings-body">
+            <label class="field row-field">
+              <span>片段名稱</span>
               <input id="shotTitle" type="text" />
             </label>
-            <label class="field small-field">
+
+            <label class="field row-field duration-field">
               <span>秒數</span>
               <input id="shotDuration" type="number" min="1" max="20" />
+              <em>秒</em>
             </label>
-            <label class="field">
-              <span>畫面描述</span>
-              <textarea id="shotPrompt" rows="5"></textarea>
-            </label>
-          </section>
 
-          <section class="tab-panel" data-panel="generate">
-            <fieldset class="mode-group">
-              <legend>生成方式</legend>
-              <label><input type="radio" name="mode" value="text" /><span>只用文字</span></label>
-              <label><input type="radio" name="mode" value="frames" /><span>起點到終點</span></label>
-              <label><input type="radio" name="mode" value="reference" /><span>參考圖生成</span></label>
-            </fieldset>
-            <button id="mockGenerateVideo" class="primary full" type="button">模擬生成影片版本</button>
-            <div id="candidateList" class="candidate-list"></div>
-          </section>
-
-          <section class="tab-panel" data-panel="media">
-            <div class="mini-preview" id="storyboardPreview"></div>
-            <div class="button-grid">
-              <button id="generateStoryboard" class="primary" type="button">生成分鏡圖</button>
-              <button id="replaceStoryboard" type="button">換一張</button>
+            <div class="trim-row">
+              <button id="trimShorter" class="button" type="button">剪短 1s</button>
+              <button id="trimLonger" class="button" type="button">加長 1s</button>
             </div>
-            <button id="deleteShot" class="danger full" type="button">刪除這格分鏡</button>
-          </section>
+
+            <label class="field">
+              <span>描述這一段</span>
+              <textarea id="shotPrompt" rows="4" maxlength="200"></textarea>
+              <small id="promptCount">0 / 200</small>
+            </label>
+
+            <fieldset class="generation-modes">
+              <legend>生成方式</legend>
+              <label><input type="radio" name="mode" value="text" /><span>用文字生成</span></label>
+              <label><input type="radio" name="mode" value="frames" /><span>首幀到尾幀生成</span></label>
+              <label><input type="radio" name="mode" value="reference" /><span>參考圖生成</span></label>
+              <label><input type="radio" name="mode" value="import" /><span>匯入影片</span></label>
+            </fieldset>
+
+            <section class="storyboard-image-tools">
+              <div class="label">分鏡圖</div>
+              <div id="storyboardPreview" class="storyboard-sketch"></div>
+              <div class="button-pair">
+                <button id="uploadStoryboard" class="button" type="button">⇧ 上傳</button>
+                <button id="generateStoryboard" class="button" type="button">✦ 生成分鏡圖</button>
+              </div>
+            </section>
+
+            <section class="lens-tools" aria-label="鏡頭">
+              <div class="label">鏡頭</div>
+              <div class="chip-list">
+                <button class="chip active" type="button">慢動作</button>
+                <button class="chip" type="button">特寫</button>
+                <button class="chip" type="button">推近</button>
+                <button class="chip" type="button">廣角</button>
+                <button class="chip" type="button">手持感</button>
+              </div>
+            </section>
+          </div>
+
+          <footer class="settings-footer">
+            <button id="mockGenerateVideo" class="generate-button" type="button">✦ 生成 4 個版本</button>
+          </footer>
         </aside>
       </section>
     </main>
