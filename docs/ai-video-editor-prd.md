@@ -1,257 +1,228 @@
-# AI Video Editor PRD Draft
+# Matry PRD Draft
 
 ## Product Intent
 
-Build a standalone desktop application for planning, generating, selecting, and assembling AI-generated short videos.
+Matry is a mobile-first launch video testing studio for AI builders.
 
-The primary UX target is videos up to about 15 minutes. This is not a hard technical duration limit; it is a product focus. Matry should feel best for ads, reels, shorts, explainers, product demos, and social posts rather than long-form film editing.
+The product is centered on vertical videos, fast variant creation, channel-specific publishing, and performance tracking. It should help a builder turn product material into multiple short launch videos, publish the strongest versions to relevant channels, and learn which hooks, blocks, and branches perform best.
 
-The editor is storyboard-first rather than timeline-first. The primary interaction should feel like arranging a film strip: users see the whole story as a sequence of visual shots, each with a duration, short intent, storyboard image, generation mode, and selected/generated video.
-
-The internal model may still support grouping and derived durations, but the default user-facing concept should be "shots in a story flow", not "parent/child segment trees". This matters because the target user may have little or no video production experience.
+Matry is not a general long-form video editor. It should feel closer to a launch lab: create blocks, generate or import media, branch variants, compare, ship, and measure.
 
 ## Core Mental Model
 
 ```text
-Project video
-├─ Shot 1
-├─ Shot 2
-├─ Shot 3
-└─ Shot 4
+Workspace
+├─ Project: Product or campaign
+│  ├─ Branch A: X launch angle
+│  │  ├─ Scene Block 1
+│  │  ├─ Scene Block 2
+│  │  └─ Scene Block 3
+│  ├─ Branch B: Product Hunt angle
+│  └─ Branch C: Feature demo angle
+└─ Results by channel
 ```
 
 Rules:
 
-- A video is primarily presented as an ordered storyboard / film strip.
-- Each shot can have its own duration.
-- Final assembly uses the ordered shots.
-- Optional grouping can exist later for chapters/scenes, but it should not be required for the basic workflow.
-- Initial assembly focuses on video only. Audio, subtitles, transitions, music, and color work are later concerns.
+- A project represents a product, campaign, or launch.
+- A branch represents one narrative or testing variant.
+- A branch is made from ordered scene blocks.
+- Scene blocks are the main editing unit.
+- The default format is vertical 9:16.
+- Exports are channel-aware, not just raw files.
+- Performance data should feed the next round of branches.
 
-Example:
+## Scene Blocks
 
-```text
-Cola advertisement 9s
-├─ Bottle cap opens 2s
-├─ Many bubbles burst from the mouth of the bottle 4s
-└─ Ending shot 3s
-```
+Each scene block can be created from one of these sources:
 
-## Target Form
+- Upload image
+- Upload video
+- AI image
+- AI video via provider
+- HyperFrames render
 
-Standalone desktop application.
+A scene block should support:
 
-The app should allow users to configure AI providers through API settings. The product should not assume a single video generation vendor. Provider integration should be replaceable through adapter-like boundaries.
+- Title
+- Intent, such as hook, proof, demo, benefit, CTA, social proof, or closing
+- Duration
+- Prompt or human-facing notes
+- Source type
+- Input assets
+- Rendered/generated candidates
+- Selected media
+- Caption text
+- Voiceover/script text
+- Generation/render status
+- Performance tags, such as "strong opener" or "weak CTA"
+
+## Multi-Project And Multi-Branch
+
+Matry should support multiple projects from the beginning.
+
+Project examples:
+
+- "Ollama launch clips"
+- "Developer tool Product Hunt launch"
+- "Investor update shorts"
+- "Feature demo retargeting"
+
+Each project can contain multiple branches:
+
+- Channel branches: X, Product Hunt, LinkedIn, TikTok, YouTube Shorts
+- Audience branches: builder, founder, investor, developer, creator
+- Hook branches: pain point, outcome, demo-first, proof-first, comparison
+- Round branches: v1, v2, winner remix, next round
+
+Branches should allow cloning from an existing branch so users can swap only the hook, CTA, caption, or a single scene block.
+
+## Target Workflow
+
+1. Create or open a project.
+2. Add product context, such as URL, screenshots, product description, or existing media.
+3. Generate or manually create branch ideas.
+4. Build each branch as a vertical sequence of scene blocks.
+5. Fill blocks from uploads, AI images, AI videos, or HyperFrames renders.
+6. Preview, caption, and package the branch for one or more channels.
+7. Export or publish.
+8. Track views, clicks, signups, saves, comments, and channel-specific signals.
+9. Generate the next round from performance winners and losers.
 
 ## MVP Scope
 
-### Project and Storyboard Structure
+### Project Dashboard
 
-- Create/open/save a video project.
-- Create and edit a storyboard-like sequence of shots.
-- Add, delete, duplicate, and reorder shots.
-- Show total duration as the sum of all shots.
-- Let users set duration per shot.
-- Make the full story flow scannable as a film strip.
-- Support optional grouping later, but do not require it in the MVP UI.
+- Create, open, duplicate, and archive projects.
+- Show active branches per project.
+- Show recent exports and performance summary.
+- Keep product context attached to the project.
 
-### Shot Fields
+### Branch Editor
 
-Each shot should support:
+- Create, duplicate, rename, and delete branches.
+- Compare branches side by side.
+- Pick a winner.
+- Generate a next round from a branch.
+- Track branch status: draft, ready, exported, published, measuring, archived.
 
-- Title
-- Human-facing note
-- AI-facing prompt text
-- Duration in seconds
-- Storyboard/reference images
-- Attached or selected video media
-- Generation status
-- Generation candidates
-- Selected candidate for final assembly
-- Generation mode
+### Block Editor
 
-### Storyboard Inputs
+- Add, delete, duplicate, reorder, and trim scene blocks.
+- Use a block rail as the primary editing surface.
+- Support block source types:
+  - Upload image
+  - Upload video
+  - AI image
+  - AI video via provider
+  - HyperFrames render
+- Keep generated candidates per block.
+- Select the active candidate for export.
 
-Storyboard design is required, not optional. The product direction should support all of these, though MVP can implement the simplest useful subset:
+### Publishing Package
 
-- User-uploaded storyboard images
-- AI-generated storyboard images
-- Frames extracted from existing video
+- Prepare channel-specific outputs for:
+  - X
+  - Product Hunt
+  - LinkedIn
+  - TikTok
+  - YouTube Shorts
+- Store captions, CTA, hashtags, thumbnail, and export preset per channel.
+- Provide readiness checks before export or publish.
 
-### Shot Creation and Splitting Modes
+### Performance Tracking
 
-Long-term target:
+- Track basic per-channel metrics:
+  - Views
+  - Clicks
+  - Click-through rate
+  - Signup rate
+  - Saves
+  - Comments
+- Attribute metrics to project, branch, channel, and date range.
+- Mark best-performing hooks, CTAs, and blocks.
+- Use results to suggest the next branch round.
 
-- Manual shot creation: user creates shots directly.
-- Text-assisted split: user writes a story description and AI proposes shots.
-- Image-assisted split: user uploads or pastes images and AI proposes shots/story beats.
+## Generation And Rendering
 
-MVP should support manual shot creation first and design the data model so text-assisted and image-assisted splitting can be added without rewriting core shot logic.
+Matry should not assume one media provider.
 
-### Generation Modes
+The provider boundary should support:
 
-Each shot should let the user choose the generation mode based on what they have:
+- AI image providers
+- AI video providers
+- HyperFrames rendering
+- User-uploaded media
+- Future local rendering or scripted animation providers
 
-- Text to video: prompt-only generation.
-- First frame to last frame: user defines or generates starting and ending frames, then generates motion between them.
-- Reference to video: user provides one or more reference images and generates a video matching the subject/style/context.
-
-The UI should make these feel like plain choices, not technical model modes.
-
-### AI Video Generation
-
-MVP may use mock generation or local placeholder state, but the architecture should prepare for:
-
-- User-configurable API keys and provider settings.
-- Multiple AI providers.
-- Per-provider capability metadata such as supported durations, image-to-video support, text-to-video support, aspect ratios, and model names.
-- Per-shot generation requests.
-- Multiple generated candidates per shot.
-- Selecting one candidate as the active final media.
-
-### Assembly
-
-MVP assembly can focus on ordering and validation first.
-
-The first real assembly implementation should:
-
-- Gather selected video media from all shots in order.
-- Concatenate video tracks.
-- Export a final video file.
-- Ignore audio until explicitly added to scope.
-
-## Suggested Main Views
-
-- Story film strip: ordered shots with thumbnails, durations, and generation status.
-- Shot inspector: edit the selected shot's fields, generation mode, and media.
-- Storyboard/media panel: manage images, generated candidates, and uploaded videos.
-- Assembly preview: final ordered shots and export readiness.
-- Settings: AI provider configuration and API keys.
+Each provider should expose capability metadata such as supported source types, durations, aspect ratios, model names, and expected cost.
 
 ## Data Model Sketch
 
 ```ts
-type Shot = {
+type SceneBlockSourceType =
+  | "upload-image"
+  | "upload-video"
+  | "ai-image"
+  | "ai-video-provider"
+  | "hyperframes-render";
+
+type SceneBlock = {
   id: string;
   title: string;
-  note: string;
-  prompt: string;
+  intent: "hook" | "proof" | "demo" | "benefit" | "cta" | "closing" | "custom";
   durationSeconds: number;
-  generationMode: "text-to-video" | "first-last-frame" | "reference-to-video";
-  storyboardAssets: AssetRef[];
-  videoCandidates: VideoCandidate[];
-  selectedVideoCandidateId: string | null;
-  status: "draft" | "ready" | "generating" | "generated" | "failed";
+  sourceType: SceneBlockSourceType;
+  prompt: string;
+  caption: string;
+  inputAssetIds: string[];
+  candidates: MediaCandidate[];
+  selectedCandidateId: string | null;
+  status: "draft" | "generating" | "rendering" | "ready" | "failed";
+};
+
+type Branch = {
+  id: string;
+  name: string;
+  channelFocus: ChannelId[];
+  blocks: SceneBlock[];
+  status: "draft" | "ready" | "exported" | "published" | "measuring" | "archived";
+};
+
+type Project = {
+  id: string;
+  title: string;
+  productUrl?: string;
+  aspectRatio: "9:16";
+  branches: Branch[];
+  activeBranchId: string;
 };
 ```
 
-Total project duration should be derived from ordered shots.
+## Suggested Main Views
 
-Optional future grouping can be modeled separately, but groups should not complicate the MVP shot workflow.
-
-## Open Questions
-
-- Which desktop stack should be used: Tauri, Electron, or another option?
-- Should projects be local files, a local database, or both?
-- Which AI providers should be supported first?
-- Should the first MVP include actual video concatenation through FFmpeg?
-- What media storage policy should be used: copy assets into project folder, reference external paths, or ask per asset?
-- Should grouping/scenes exist in v1, or should v1 stay as a flat film strip?
+- Projects: multi-project overview with recent performance.
+- Branches: variants, branches, winners, and next-round generation.
+- Block editor: vertical preview plus ordered scene blocks.
+- Source panel: upload image/video, AI image, AI video provider, HyperFrames.
+- Compare: branch-by-branch scoring and preview.
+- Export/results: channel packages, readiness checklist, and metrics.
 
 ## Recommended Build Phases
 
-1. Product skeleton: desktop app shell, project file format, storyboard shot model, manual film-strip editing UI.
-2. Media skeleton: image/video asset attachment, generation candidate records, selected candidate state.
-3. Provider architecture: settings UI, provider adapter interface, mock provider.
-4. Real generation: integrate the first text-to-video/image-to-video provider.
-5. Assembly: concatenate selected shot videos and export a single video file.
-6. AI-assisted planning: text-to-shots split, then image-to-shots split.
+1. Retarget product model to projects, branches, scene blocks, channel packages, and metrics.
+2. Update the runnable Studio prototype terminology and demo data.
+3. Add branch duplication and branch comparison in the prototype.
+4. Add asset/source handling for uploaded image/video, AI image, AI video, and HyperFrames placeholders.
+5. Add export packages per channel.
+6. Add manual metrics entry first, then platform integrations later.
+7. Use performance winners to generate next-round branch suggestions.
 
-## Roadmap
+## Out Of Scope Until Later
 
-### Product Layers
-
-1. Storyboard planning
-   - Break an idea into shots.
-   - Generate or attach storyboard images.
-   - Confirm visual rhythm before generating video.
-
-2. AI generation
-   - Generate each shot with provider adapters.
-   - Support BYOK provider settings.
-   - Keep multiple generated candidates per shot.
-   - Track waiting, success, and failure states.
-
-3. Short-video timeline
-   - Main video track from storyboard shots.
-   - Music tracks, possibly multiple.
-   - Subtitle tracks, possibly multiple.
-   - Shared playhead and simple trim controls.
-
-4. Export
-   - Validate that each video shot has selected media.
-   - Export video for platform-specific aspect ratios and presets.
-
-5. Publish planning
-   - Prepare title, description, hashtags, cover, and platform-specific metadata.
-   - This comes before direct platform upload.
-
-6. Schedule publishing
-   - Schedule uploads to social platforms.
-   - Treat as a later workflow after export and publish planning are stable.
-
-### MVP
-
-MVP should focus on making a short AI video:
-
-- Storyboard/shot planning
-- Storyboard image workflow
-- Provider settings with BYOK
-- Mock provider plus first real provider adapter
-- Per-shot generation jobs and candidates
-- Three-track short-video timeline:
-  - Video
-  - Music
-  - Subtitles
-- Basic trim and playhead controls
-- Export readiness validation
-
-Direct social platform scheduling is not part of MVP.
-
-### Phase 2
-
-Add production readiness around export and publishing:
-
-- Real video assembly/export
-- Platform presets:
-  - YouTube Shorts
-  - TikTok
-  - Instagram Reels
-  - Facebook Reels
-  - X video
-- Caption/description/hashtag assistant
-- Cover image selection
-- Publish checklist
-- Better subtitle editing
-- Music import and timing controls
-
-### Phase 3
-
-Add scheduling and platform integration:
-
-- OAuth account connections
-- Scheduled publish jobs
-- Platform upload status
-- Retry and failure handling
-- Draft publishing
-- Per-platform metadata variants
-
-### Out Of Scope Until Later
-
-- Full professional multi-track video editing
-- Long-form documentary/film editing workflows
+- Full professional timeline editing
+- Long-form video editing
 - Advanced audio mixing
-- Color grading
-- Keyframes and motion graphics
-- Multi-user collaboration
-- Cloud sync and team accounts
+- Direct multi-account OAuth publishing in the MVP
+- Team permissions and collaborative editing
+- Fully automated attribution across every platform

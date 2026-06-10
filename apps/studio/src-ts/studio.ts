@@ -241,29 +241,29 @@ function createCandidate(name: string, status: string, seed: number): VideoCandi
 function createDemoProject(): Project {
   return {
     id: crypto.randomUUID(),
-    title: "可樂短廣告",
+    title: "Ollama Launch Clips",
     aspectRatio: "9:16",
-    style: "商業廣告",
+    style: "AI builder launch",
     shots: [
-      createShot("瓶蓋打開", 2, "frames", "手指旋開冰涼可樂瓶蓋，瓶口冒出第一道氣泡。", 0, "done"),
-      createShot("氣泡噴出", 4, "frames", "大量氣泡從瓶口噴出，慢動作，水珠飛濺，背景為深色攝影棚。", 1, "generating"),
-      createShot("結尾標語", 3, "text", "可樂瓶站在冰塊上，畫面出現醒目標語，最後定格成廣告主視覺。", 2, "done"),
+      createShot("Hook: run local models", 3, "frames", "用強烈開場呈現 Run AI models locally, your machine，展示產品畫面和本機推論速度。", 0, "done"),
+      createShot("Demo: from install to chat", 5, "reference", "快速展示安裝、啟動模型、打開聊天介面，讓 builder 立刻理解工作流。", 1, "generating"),
+      createShot("CTA: download and test", 4, "text", "收尾給明確 CTA：Download, try a model, ship your first local AI workflow today。", 2, "done"),
     ],
     timeline: [
       {
         id: crypto.randomUUID(),
         kind: "music",
-        label: "音樂 1",
-        clips: [{ id: crypto.randomUUID(), title: "清爽廣告配樂", startSeconds: 0, durationSeconds: 9 }],
+        label: "BGM",
+        clips: [{ id: crypto.randomUUID(), title: "Launch Pulse", startSeconds: 0, durationSeconds: 12 }],
       },
       {
         id: crypto.randomUUID(),
         kind: "subtitle",
-        label: "字幕 1",
+        label: "Captions",
         clips: [
-          { id: crypto.randomUUID(), title: "冰涼開場", startSeconds: 0.4, durationSeconds: 2.2 },
-          { id: crypto.randomUUID(), title: "氣泡爆發", startSeconds: 3, durationSeconds: 2.6 },
-          { id: crypto.randomUUID(), title: "暢爽時刻", startSeconds: 6.2, durationSeconds: 2.4 },
+          { id: crypto.randomUUID(), title: "Run models locally", startSeconds: 0.4, durationSeconds: 2.4 },
+          { id: crypto.randomUUID(), title: "Install to first chat", startSeconds: 3.2, durationSeconds: 4.2 },
+          { id: crypto.randomUUID(), title: "Download and ship", startSeconds: 8.2, durationSeconds: 3 },
         ],
       },
     ],
@@ -359,13 +359,13 @@ function render(): void {
   playheadSeconds = clamp(playheadSeconds, 0, total);
 
   els.totalDuration.textContent = `${total}s`;
-  els.shotCount.textContent = `${state.project.shots.length} 個片段`;
+  els.shotCount.textContent = `${state.project.shots.length} 個 Scene Blocks`;
   els.playFrom.max = String(total);
   els.shotRail.innerHTML = state.project.shots.map(renderShotCard).join("") + renderAddCard();
   els.stageImage.innerHTML = renderStage(current, shotIndex);
   els.stageTimecode.textContent = `00:01 / 00:${String(current.duration).padStart(2, "0")}`;
   els.rhythmTrack.innerHTML = renderScrubTrack(total);
-  els.settingsTitle.textContent = `Shot ${shotIndex + 1} 設定`;
+  els.settingsTitle.textContent = `Block ${shotIndex + 1} 設定`;
   els.shotTitle.value = current.title;
   els.shotDuration.value = String(current.duration);
   els.shotPrompt.value = current.prompt;
@@ -436,7 +436,7 @@ function renderShotCard(shot: Shot, index: number): string {
       <div class="shot-image">
         ${shotSvg(shot, "card")}
         <span class="status-badge${statusClass}">${statusText}</span>
-        <span class="shot-number">Shot ${index + 1}</span>
+        <span class="shot-number">Block ${index + 1}</span>
       </div>
       <div class="card-title-row">
         <strong>${escapeHtml(shot.title)}</strong>
@@ -464,7 +464,7 @@ function renderAddCard(): string {
   return `
     <button id="addShotCard" class="storyboard-card add-card" type="button">
       <strong>+</strong>
-      <span>新增片段</span>
+      <span>新增 Block</span>
     </button>
   `;
 }
@@ -473,7 +473,7 @@ function renderStage(shot: Shot, index: number): string {
   return `
     ${shotSvg(shot, "stage")}
     <div class="stage-overlay">
-      <span>Shot ${index + 1}</span>
+      <span>Block ${index + 1}</span>
       <strong>${escapeHtml(shot.title)}</strong>
     </div>
   `;
@@ -508,7 +508,7 @@ function renderScrubTrack(total: number): string {
     <div class="timeline-body">
       <div class="timeline-ruler">${renderTimelineTicks(total)}</div>
       <div class="timeline-track">
-        <div class="track-label">影片</div>
+        <div class="track-label">Video</div>
         <div class="track-lane video-lane">${videoClips}</div>
       </div>
       ${extraTracks}
@@ -739,7 +739,7 @@ function clearDropMarkers(): void {
 }
 
 function addShot(): void {
-  const shot = createShot("新片段", 3, "text", "描述這一段會出現的畫面、動作和節奏。", randomSeed(), "draft");
+  const shot = createShot("New Scene Block", 3, "text", "描述這個 block 要承擔的 hook、demo、benefit 或 CTA。", randomSeed(), "draft");
   state = {
     ...state,
     selectedShotId: shot.id,

@@ -9,6 +9,9 @@
   "scripts": {
     "build": "tsc -b packages/project packages/generation packages/providers apps/studio",
     "build:studio": "tsc -p apps/studio/tsconfig.json",
+    "ios:sync": "npm run build:studio && rm -rf apps/ios/Matry/Matry/Web && mkdir -p apps/ios/Matry/Matry/Web && cp apps/studio/index.html apps/ios/Matry/Matry/Web/index.html && cp -R apps/studio/styles apps/ios/Matry/Matry/Web/styles && cp -R apps/studio/dist apps/ios/Matry/Matry/Web/dist",
+    "ios:build:sim": "npm run ios:sync && xcodebuild -project apps/ios/Matry/Matry.xcodeproj -scheme Matry -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/ios/Matry/DerivedData CODE_SIGNING_ALLOWED=NO build",
+    "ios:open": "open apps/ios/Matry/Matry.xcodeproj",
     "typecheck": "tsc -b --pretty false packages/project packages/generation packages/providers apps/studio"
   },
   "devDependencies": {}

@@ -7,3 +7,6 @@
 
 # Local checkpoint catalog (synced from Comfy + Civitai)
 /server/data/
+
+# iOS local build output
+/apps/ios/Matry/DerivedData/
