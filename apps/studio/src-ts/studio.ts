@@ -36,6 +36,7 @@ type GenerationJobRecord = {
 type Project = {
   id: string;
   title: string;
+  goal: string;
   aspectRatio: string;
   style: string;
   shots: Shot[];
@@ -57,10 +58,13 @@ type TimelineTrack = {
 };
 
 type StudioState = {
+  view: "projects" | "editor";
+  projects: Project[];
   project: Project;
   selectedShotId: string;
   playingShotId: string | null;
   providerSettings: ProviderSettings;
+  editingProjectId: string | null;
 };
 
 type ProviderSettings = {
@@ -77,6 +81,22 @@ type ProviderCapability = {
 };
 
 type Elements = {
+  projectScene: HTMLElement;
+  editorScene: HTMLElement;
+  projectList: HTMLElement;
+  newProject: HTMLButtonElement;
+  backToProjects: HTMLButtonElement;
+  projectDialog: HTMLDialogElement;
+  projectDialogTitle: HTMLElement;
+  projectTitleInput: HTMLInputElement;
+  projectGoalInput: HTMLInputElement;
+  projectDialogStatus: HTMLElement;
+  saveProject: HTMLButtonElement;
+  blockMediaDialog: HTMLDialogElement;
+  closeBlockMediaDialog: HTMLButtonElement;
+  blockMediaTitle: HTMLElement;
+  existingVideoList: HTMLElement;
+  projectName: HTMLInputElement;
   totalDuration: HTMLElement;
   shotCount: HTMLElement;
   shotRail: HTMLElement;
@@ -242,6 +262,7 @@ function createDemoProject(): Project {
   return {
     id: crypto.randomUUID(),
     title: "Ollama Launch Clips",
+    goal: "Clicks",
     aspectRatio: "9:16",
     style: "AI builder launch",
     shots: [
@@ -272,11 +293,20 @@ function createDemoProject(): Project {
 
 let state: StudioState = (() => {
   const project = createDemoProject();
+  const secondProject: Project = {
+    ...createDemoProject(),
+    title: "Product Hunt Round",
+    goal: "Signups",
+    style: "Product Hunt launch",
+  };
   return {
+    view: "projects",
+    projects: [project, secondProject],
     project,
     selectedShotId: project.shots[1]?.id ?? project.shots[0].id,
     playingShotId: null,
     providerSettings: loadProviderSettings(),
+    editingProjectId: null,
   };
 })();
 
@@ -294,6 +324,22 @@ const els = getElements();
 
 function getElements(): Elements {
   return {
+    projectScene: mustElement("#projectScene", HTMLElement),
+    editorScene: mustElement("#editorScene", HTMLElement),
+    projectList: mustElement("#projectList", HTMLElement),
+    newProject: mustElement("#newProject", HTMLButtonElement),
+    backToProjects: mustElement("#backToProjects", HTMLButtonElement),
+    projectDialog: mustElement("#projectDialog", HTMLDialogElement),
+    projectDialogTitle: mustElement("#projectDialogTitle", HTMLElement),
+    projectTitleInput: mustElement("#projectTitleInput", HTMLInputElement),
+    projectGoalInput: mustElement("#projectGoalInput", HTMLInputElement),
+    projectDialogStatus: mustElement("#projectDialogStatus", HTMLElement),
+    saveProject: mustElement("#saveProject", HTMLButtonElement),
+    blockMediaDialog: mustElement("#blockMediaDialog", HTMLDialogElement),
+    closeBlockMediaDialog: mustElement("#closeBlockMediaDialog", HTMLButtonElement),
+    blockMediaTitle: mustElement("#blockMediaTitle", HTMLElement),
+    existingVideoList: mustElement("#existingVideoList", HTMLElement),
+    projectName: mustElement("#projectName", HTMLInputElement),
     totalDuration: mustElement("#totalDuration", HTMLElement),
     shotCount: mustElement("#shotCount", HTMLElement),
     shotRail: mustElement("#shotRail", HTMLElement),
@@ -353,11 +399,16 @@ function totalDuration(): number {
 }
 
 function render(): void {
+  els.projectScene.classList.toggle("hidden", state.view !== "projects");
+  els.editorScene.classList.toggle("hidden", state.view !== "editor");
+  renderProjectList();
+
   const total = totalDuration();
   const current = selectedShot();
   const shotIndex = state.project.shots.findIndex((shot) => shot.id === current.id);
   playheadSeconds = clamp(playheadSeconds, 0, total);
 
+  els.projectName.value = state.project.title;
   els.totalDuration.textContent = `${total}s`;
   els.shotCount.textContent = `${state.project.shots.length} 個 Scene Blocks`;
   els.playFrom.max = String(total);
@@ -380,6 +431,40 @@ function render(): void {
 
   renderProviderSettings();
   bindDynamicInteractions();
+}
+
+function renderProjectList(): void {
+  els.projectList.innerHTML = state.projects.map(renderProjectCard).join("");
+  bindProjectCardActions();
+}
+
+function renderProjectCard(project: Project): string {
+  const duration = project.shots.reduce((sum, shot) => sum + shot.duration, 0);
+  const readyCount = project.shots.filter((shot) => shot.status === "done").length;
+  const active = project.id === state.project.id ? " active" : "";
+
+  return `
+    <article class="project-card${active}" data-project="${project.id}">
+      <div class="project-card-preview">${shotSvg(project.shots[0], "version")}</div>
+      <div class="project-card-body">
+        <div>
+          <span class="dialog-eyebrow">${escapeHtml(project.style)}</span>
+          <h2>${escapeHtml(project.title)}</h2>
+        </div>
+        <div class="project-card-stats">
+          <span>${project.shots.length} blocks</span>
+          <span>${duration}s</span>
+          <span>${readyCount} ready</span>
+          <span>${escapeHtml(project.goal)}</span>
+        </div>
+      </div>
+      <footer class="project-card-actions">
+        <button class="button primary" data-project-action="open" data-project="${project.id}" type="button">編輯</button>
+        <button class="button" data-project-action="rename" data-project="${project.id}" type="button">改名</button>
+        <button class="button danger" data-project-action="delete" data-project="${project.id}" type="button">刪除</button>
+      </footer>
+    </article>
+  `;
 }
 
 function renderGenerationState(shot: Shot): void {
@@ -424,6 +509,99 @@ function generationJobLabel(status: GenerationJobStatus): string {
   return "錯誤";
 }
 
+function bindProjectCardActions(): void {
+  els.projectList.querySelectorAll<HTMLButtonElement>("[data-project-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const projectId = button.dataset.project ?? "";
+      const action = button.dataset.projectAction;
+      if (action === "open") openProject(projectId);
+      if (action === "rename") openProjectDialog(projectId);
+      if (action === "delete") deleteProject(projectId);
+    });
+  });
+}
+
+function openProject(projectId: string): void {
+  const project = state.projects.find((item) => item.id === projectId);
+  if (!project) return;
+  state = {
+    ...state,
+    view: "editor",
+    project,
+    selectedShotId: project.shots[0]?.id ?? "",
+    playingShotId: null,
+  };
+  render();
+}
+
+function openProjectDialog(projectId: string | null): void {
+  const project = projectId ? state.projects.find((item) => item.id === projectId) : null;
+  state = { ...state, editingProjectId: project?.id ?? null };
+  els.projectDialogTitle.textContent = project ? "編輯專案" : "新增專案";
+  els.projectTitleInput.value = project?.title ?? "";
+  els.projectGoalInput.value = project?.goal ?? "";
+  els.projectDialogStatus.textContent = project ? "更新專案資訊" : "建立一個新的 launch video 專案";
+  els.projectDialog.showModal();
+}
+
+function saveProjectFromDialog(): void {
+  const title = els.projectTitleInput.value.trim();
+  if (!title) {
+    els.projectDialogStatus.textContent = "請輸入專案名稱";
+    return;
+  }
+
+  const goal = els.projectGoalInput.value.trim() || "Clicks";
+  if (state.editingProjectId) {
+    const projects = state.projects.map((project) =>
+      project.id === state.editingProjectId ? { ...project, title, goal } : project,
+    );
+    const activeProject = projects.find((project) => project.id === state.project.id) ?? projects[0];
+    state = { ...state, projects, project: activeProject, editingProjectId: null };
+  } else {
+    const project = createProject(title, goal);
+    state = {
+      ...state,
+      projects: [project, ...state.projects],
+      project,
+      selectedShotId: project.shots[0].id,
+      editingProjectId: null,
+    };
+  }
+  els.projectDialog.close();
+  render();
+}
+
+function deleteProject(projectId: string): void {
+  const project = state.projects.find((item) => item.id === projectId);
+  if (!project || !window.confirm(`刪除「${project.title}」？`)) return;
+  const projects = state.projects.filter((item) => item.id !== projectId);
+  const nextProject = projects[0] ?? createProject("New Launch Project", "Clicks");
+  state = {
+    ...state,
+    projects: projects.length ? projects : [nextProject],
+    project: state.project.id === projectId ? nextProject : state.project,
+    selectedShotId: state.project.id === projectId ? nextProject.shots[0].id : state.selectedShotId,
+  };
+  render();
+}
+
+function createProject(title: string, goal: string): Project {
+  const project = createDemoProject();
+  return {
+    ...project,
+    title,
+    goal,
+    style: "Vertical launch video",
+    shots: [
+      createShot("Hook", 3, "frames", "用一句強 hook 讓觀眾知道這支影片要解決什麼痛點。", randomSeed(), "draft"),
+      createShot("Demo", 5, "reference", "展示產品核心畫面與使用流程，讓觀眾快速理解價值。", randomSeed(), "draft"),
+      createShot("CTA", 3, "text", "收尾給明確行動：點擊、下載、註冊或前往 Product Hunt。", randomSeed(), "draft"),
+    ],
+    timeline: [],
+  };
+}
+
 function renderShotCard(shot: Shot, index: number): string {
   const active = shot.id === state.selectedShotId ? " active" : "";
   const playing = shot.id === state.playingShotId ? " playing" : "";
@@ -447,10 +625,10 @@ function renderShotCard(shot: Shot, index: number): string {
         <button class="trim-handle" data-trim-handle="${shot.id}" type="button" aria-label="拖拉片段長度"></button>
       </div>
       <div class="quick-edits">
-        <button data-action="shorter" data-shot="${shot.id}" type="button">-1s</button>
-        <button data-action="left" data-shot="${shot.id}" type="button">←</button>
-        <button data-action="right" data-shot="${shot.id}" type="button">→</button>
-        <button data-action="longer" data-shot="${shot.id}" type="button">+1s</button>
+        <button data-action="view" data-shot="${shot.id}" type="button">觀看</button>
+        <button data-action="up" data-shot="${shot.id}" type="button">上移</button>
+        <button data-action="down" data-shot="${shot.id}" type="button">下移</button>
+        <button data-action="media" data-shot="${shot.id}" type="button">媒體</button>
       </div>
     </article>
   `;
@@ -718,10 +896,10 @@ function bindDynamicInteractions(): void {
     button.addEventListener("click", () => {
       const id = button.dataset.shot ?? "";
       const action = button.dataset.action;
-      if (action === "shorter") adjustDuration(id, -1);
-      if (action === "longer") adjustDuration(id, 1);
-      if (action === "left") moveShot(id, -1);
-      if (action === "right") moveShot(id, 1);
+      if (action === "view") watchShot(id);
+      if (action === "up") moveShot(id, -1);
+      if (action === "down") moveShot(id, 1);
+      if (action === "media") openBlockMediaDialog(id);
     });
   });
 
@@ -738,23 +916,37 @@ function clearDropMarkers(): void {
   els.shotRail.querySelectorAll(".drop-before").forEach((item) => item.classList.remove("drop-before"));
 }
 
+function withUpdatedProject(project: Project): Pick<StudioState, "project" | "projects"> {
+  return {
+    project,
+    projects: state.projects.map((item) => (item.id === project.id ? project : item)),
+  };
+}
+
 function addShot(): void {
   const shot = createShot("New Scene Block", 3, "text", "描述這個 block 要承擔的 hook、demo、benefit 或 CTA。", randomSeed(), "draft");
   state = {
     ...state,
     selectedShotId: shot.id,
-    project: { ...state.project, shots: [...state.project.shots, shot] },
+    ...withUpdatedProject({ ...state.project, shots: [...state.project.shots, shot] }),
   };
   render();
+}
+
+function watchShot(id: string): void {
+  state = { ...state, selectedShotId: id, view: "editor" };
+  els.storyboardDialog.close();
+  render();
+  playPreview(0, true);
 }
 
 function updateSelected(patch: Partial<Shot>): void {
   state = {
     ...state,
-    project: {
+    ...withUpdatedProject({
       ...state.project,
       shots: state.project.shots.map((shot) => (shot.id === state.selectedShotId ? { ...shot, ...patch } : shot)),
-    },
+    }),
   };
   render();
 }
@@ -762,10 +954,10 @@ function updateSelected(patch: Partial<Shot>): void {
 function updateShotById(shotId: string, patch: Partial<Shot>): void {
   state = {
     ...state,
-    project: {
+    ...withUpdatedProject({
       ...state.project,
       shots: state.project.shots.map((shot) => (shot.id === shotId ? { ...shot, ...patch } : shot)),
-    },
+    }),
   };
   render();
 }
@@ -780,10 +972,10 @@ function setShotDuration(id: string, duration: number, shouldRender = true): voi
   state = {
     ...state,
     selectedShotId: id,
-    project: {
+    ...withUpdatedProject({
       ...state.project,
       shots: state.project.shots.map((shot) => (shot.id === id ? { ...shot, duration } : shot)),
-    },
+    }),
   };
   if (shouldRender) render();
   if (!shouldRender) {
@@ -809,7 +1001,7 @@ function moveShot(id: string, direction: number): void {
   const shots = [...state.project.shots];
   const [shot] = shots.splice(index, 1);
   shots.splice(nextIndex, 0, shot);
-  state = { ...state, selectedShotId: id, project: { ...state.project, shots } };
+  state = { ...state, selectedShotId: id, ...withUpdatedProject({ ...state.project, shots }) };
   render();
 }
 
@@ -822,7 +1014,7 @@ function reorderShot(draggedId: string, targetId: string): void {
   const [shot] = shots.splice(from, 1);
   const insertAt = from < to ? to - 1 : to;
   shots.splice(insertAt, 0, shot);
-  state = { ...state, selectedShotId: draggedId, project: { ...state.project, shots } };
+  state = { ...state, selectedShotId: draggedId, ...withUpdatedProject({ ...state.project, shots }) };
   render();
 }
 
@@ -1012,6 +1204,82 @@ function createMockCandidatesPatch(count: number): Partial<Shot> {
   };
 }
 
+function openBlockMediaDialog(shotId = state.selectedShotId): void {
+  const shot = state.project.shots.find((item) => item.id === shotId);
+  if (!shot) return;
+  state = { ...state, selectedShotId: shot.id };
+  els.blockMediaTitle.textContent = `${shot.title} 的影片來源`;
+  renderExistingVideos(shot);
+  els.blockMediaDialog.showModal();
+  render();
+}
+
+function renderExistingVideos(shot: Shot): void {
+  if (shot.candidates.length === 0) {
+    els.existingVideoList.innerHTML = `
+      <div class="empty-existing">
+        還沒有舊影片。可以先選 AI Video、HyperFrames 或 Upload 建立一個版本。
+      </div>
+    `;
+    return;
+  }
+
+  els.existingVideoList.innerHTML = `
+    <strong>舊影片</strong>
+    ${shot.candidates
+      .map(
+        (candidate, index) => `
+          <button class="existing-video" data-existing-video="${index}" type="button">
+            <span>${candidate.name}</span>
+            <em>${shot.selectedCandidateIndex === index ? "目前使用" : candidate.status}</em>
+          </button>
+        `,
+      )
+      .join("")}
+  `;
+
+  els.existingVideoList.querySelectorAll<HTMLButtonElement>("[data-existing-video]").forEach((button) => {
+    button.addEventListener("click", () => {
+      updateSelected({ selectedCandidateIndex: Number(button.dataset.existingVideo), status: "done" });
+      els.blockMediaDialog.close();
+    });
+  });
+}
+
+function applyMediaAction(action: string): void {
+  const shot = selectedShot();
+  if (action === "ai-video") {
+    els.blockMediaDialog.close();
+    startMockGeneration(false);
+    return;
+  }
+
+  if (action === "hyperframes") {
+    updateSelected({
+      mode: "reference",
+      status: "done",
+      candidates: [createCandidate("HyperFrames render", "已選", randomSeed()), ...shot.candidates],
+      selectedCandidateIndex: 0,
+    });
+  }
+
+  if (action === "upload") {
+    updateSelected({
+      mode: "import",
+      status: "done",
+      candidates: [createCandidate("Uploaded video", "已選", randomSeed()), ...shot.candidates],
+      selectedCandidateIndex: 0,
+    });
+  }
+
+  if (action === "existing") {
+    renderExistingVideos(shot);
+    return;
+  }
+
+  els.blockMediaDialog.close();
+}
+
 function shotSvg(shot: Pick<Shot, "id" | "title" | "prompt" | "imageSeed">, size: "card" | "stage" | "sketch" | "version"): string {
   const [start, end] = palette[shot.imageSeed % palette.length];
   const title = escapeHtml(shot.title);
@@ -1066,8 +1334,22 @@ els.playPreview.addEventListener("click", () => playPreview(0, false));
 els.playSelected.addEventListener("click", () => playPreview(0, true));
 els.playFromTime.addEventListener("click", () => playPreview(Number(els.playFrom.value), false));
 els.rhythmTrack.addEventListener("click", locateTime);
+els.backToProjects.addEventListener("click", () => {
+  state = { ...state, view: "projects", playingShotId: null };
+  render();
+});
 els.openStoryboardDialog.addEventListener("click", () => els.storyboardDialog.showModal());
 els.closeStoryboardDialog.addEventListener("click", () => els.storyboardDialog.close());
+els.newProject.addEventListener("click", () => openProjectDialog(null));
+els.saveProject.addEventListener("click", saveProjectFromDialog);
+els.projectName.addEventListener("input", () => {
+  const project = { ...state.project, title: els.projectName.value };
+  state = { ...state, ...withUpdatedProject(project) };
+});
+els.closeBlockMediaDialog.addEventListener("click", () => els.blockMediaDialog.close());
+document.querySelectorAll<HTMLButtonElement>("[data-media-action]").forEach((button) => {
+  button.addEventListener("click", () => applyMediaAction(button.dataset.mediaAction ?? ""));
+});
 
 function openProviderSettings(): void {
   renderProviderSettings();
@@ -1098,12 +1380,7 @@ document.querySelectorAll<HTMLButtonElement>(".chip").forEach((chip) => {
 });
 
 els.generateStoryboard.addEventListener("click", () => updateSelected({ imageSeed: randomSeed() }));
-els.mockGenerateVideo.addEventListener("click", () => {
-  const capability = providerCapabilities[state.providerSettings.provider];
-  const endpoint = capability.endpoints[selectedShot().mode];
-  if (!endpoint && selectedShot().mode !== "import") return;
-  startMockGeneration(false);
-});
+els.mockGenerateVideo.addEventListener("click", () => openBlockMediaDialog());
 els.mockCreditError.addEventListener("click", () => startMockGeneration(true));
 
 render();

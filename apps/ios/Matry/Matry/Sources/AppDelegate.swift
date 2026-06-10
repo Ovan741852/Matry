@@ -17,7 +17,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 }
 
-final class StudioViewController: UIViewController, WKNavigationDelegate {
+final class StudioViewController: UIViewController, WKNavigationDelegate, UIScrollViewDelegate {
     private var webView: WKWebView!
 
     override func viewDidLoad() {
@@ -29,6 +29,10 @@ final class StudioViewController: UIViewController, WKNavigationDelegate {
 
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
+        webView.scrollView.delegate = self
+        webView.scrollView.minimumZoomScale = 1
+        webView.scrollView.maximumZoomScale = 1
+        webView.scrollView.pinchGestureRecognizer?.isEnabled = false
         webView.translatesAutoresizingMaskIntoConstraints = false
         webView.allowsBackForwardNavigationGestures = true
         view.addSubview(webView)
@@ -67,5 +71,9 @@ final class StudioViewController: UIViewController, WKNavigationDelegate {
             label.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
             label.centerYAnchor.constraint(equalTo: view.centerYAnchor),
         ])
+    }
+
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+        nil
     }
 }

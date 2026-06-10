@@ -4,6 +4,9 @@
 /web/package-lock.json
 /web/dist
 /web/node_modules
+/node_modules
+**/node_modules/
+**/.expo/
 
 # Local checkpoint catalog (synced from Comfy + Civitai)
 /server/data/

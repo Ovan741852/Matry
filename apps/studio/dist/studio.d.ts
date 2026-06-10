@@ -32,6 +32,7 @@ type GenerationJobRecord = {
 type Project = {
     id: string;
     title: string;
+    goal: string;
     aspectRatio: string;
     style: string;
     shots: Shot[];
@@ -50,10 +51,13 @@ type TimelineTrack = {
     clips: TimelineClip[];
 };
 type StudioState = {
+    view: "projects" | "editor";
+    projects: Project[];
     project: Project;
     selectedShotId: string;
     playingShotId: string | null;
     providerSettings: ProviderSettings;
+    editingProjectId: string | null;
 };
 type ProviderSettings = {
     provider: ProviderId;
@@ -67,6 +71,22 @@ type ProviderCapability = {
     pricingHint: string;
 };
 type Elements = {
+    projectScene: HTMLElement;
+    editorScene: HTMLElement;
+    projectList: HTMLElement;
+    newProject: HTMLButtonElement;
+    backToProjects: HTMLButtonElement;
+    projectDialog: HTMLDialogElement;
+    projectDialogTitle: HTMLElement;
+    projectTitleInput: HTMLInputElement;
+    projectGoalInput: HTMLInputElement;
+    projectDialogStatus: HTMLElement;
+    saveProject: HTMLButtonElement;
+    blockMediaDialog: HTMLDialogElement;
+    closeBlockMediaDialog: HTMLButtonElement;
+    blockMediaTitle: HTMLElement;
+    existingVideoList: HTMLElement;
+    projectName: HTMLInputElement;
     totalDuration: HTMLElement;
     shotCount: HTMLElement;
     shotRail: HTMLElement;
@@ -131,8 +151,16 @@ declare function mustElement<T extends Element>(selector: string, ctor: {
 declare function selectedShot(): Shot;
 declare function totalDuration(): number;
 declare function render(): void;
+declare function renderProjectList(): void;
+declare function renderProjectCard(project: Project): string;
 declare function renderGenerationState(shot: Shot): void;
 declare function generationJobLabel(status: GenerationJobStatus): string;
+declare function bindProjectCardActions(): void;
+declare function openProject(projectId: string): void;
+declare function openProjectDialog(projectId: string | null): void;
+declare function saveProjectFromDialog(): void;
+declare function deleteProject(projectId: string): void;
+declare function createProject(title: string, goal: string): Project;
 declare function renderShotCard(shot: Shot, index: number): string;
 declare function getShotCardWidth(duration: number): number;
 declare function renderAddCard(): string;
@@ -144,7 +172,9 @@ declare function renderCandidates(shot: Shot): string;
 declare function renderProviderSettings(): void;
 declare function bindDynamicInteractions(): void;
 declare function clearDropMarkers(): void;
+declare function withUpdatedProject(project: Project): Pick<StudioState, "project" | "projects">;
 declare function addShot(): void;
+declare function watchShot(id: string): void;
 declare function updateSelected(patch: Partial<Shot>): void;
 declare function updateShotById(shotId: string, patch: Partial<Shot>): void;
 declare function adjustDuration(id: string, delta: number): void;
@@ -164,6 +194,9 @@ declare function isProviderId(value: unknown): value is ProviderId;
 declare function createMockCandidates(count: number): VideoCandidate[];
 declare function startMockGeneration(forceError?: boolean): void;
 declare function createMockCandidatesPatch(count: number): Partial<Shot>;
+declare function openBlockMediaDialog(shotId?: string): void;
+declare function renderExistingVideos(shot: Shot): void;
+declare function applyMediaAction(action: string): void;
 declare function shotSvg(shot: Pick<Shot, "id" | "title" | "prompt" | "imageSeed">, size: "card" | "stage" | "sketch" | "version"): string;
 declare function randomSeed(): number;
 declare function escapeHtml(value: string): string;

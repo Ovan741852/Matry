@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Matry",
+    "slug": "matry",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "matry",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.matry.studio",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.matry.studio"
+    }
+  }
+}

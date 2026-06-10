@@ -2,15 +2,27 @@
 <html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Matry Studio</title>
     <link rel="stylesheet" href="./styles/studio.css" />
   </head>
   <body>
-    <main class="app">
+    <main id="projectScene" class="project-scene">
+      <header class="project-home-head">
+        <div>
+          <span class="dialog-eyebrow">Matry</span>
+          <h1>Projects</h1>
+        </div>
+        <button id="newProject" class="button primary" type="button">+ 新增專案</button>
+      </header>
+
+      <section id="projectList" class="project-list" aria-label="專案列表"></section>
+    </main>
+
+    <main id="editorScene" class="app hidden">
       <header class="topbar">
         <section class="project-meta" aria-label="專案資訊">
-          <button class="ghost icon-only" type="button" aria-label="返回">←</button>
+          <button id="backToProjects" class="ghost icon-only" type="button" aria-label="返回專案">←</button>
           <div class="divider"></div>
           <input id="projectName" class="project-title" value="Ollama Launch Clips" aria-label="專案名稱" />
           <button class="ghost icon-only" type="button" aria-label="編輯名稱">✎</button>
@@ -20,7 +32,7 @@
           <div class="pill"><span>Goal</span><strong>Clicks</strong></div>
         </section>
         <section class="project-actions" aria-label="專案操作">
-          <button id="openStoryboardDialog" class="button" type="button">▥ Blocks</button>
+          <button id="openStoryboardDialog" class="button" type="button">▥ Scene Blocks</button>
           <button id="openApiSettings" class="button settings-button" type="button">⚙ Provider 設定</button>
           <button id="playPreview" class="button" type="button">▶ 播放預覽</button>
           <button class="button" type="button">⎇ Duplicate Branch</button>
@@ -133,7 +145,7 @@
           </div>
 
           <footer class="settings-footer">
-            <button id="mockGenerateVideo" class="generate-button" type="button">✦ Generate Block Media</button>
+            <button id="mockGenerateVideo" class="generate-button" type="button">✦ 選擇/生成影片</button>
             <button id="mockCreditError" class="button full-width" type="button">模擬額度不足</button>
           </footer>
         </aside>
@@ -150,8 +162,68 @@
           </div>
           <button id="closeStoryboardDialog" class="ghost icon-only" type="button" aria-label="關閉">×</button>
         </header>
-        <p>用 block 規劃每個 branch：hook、demo、benefit、proof、CTA 都可以獨立替換與測試。</p>
+        <p>上下拖拉 Scene Block 調整順序；按觀看可以快速預覽單一 block。</p>
         <div id="shotRail" class="storyboard-rail" aria-label="Scene Block 列"></div>
+      </section>
+    </dialog>
+
+    <dialog id="projectDialog" class="settings-dialog">
+      <form method="dialog" class="settings-dialog-card">
+        <header>
+          <div>
+            <span class="dialog-eyebrow">Project</span>
+            <h2 id="projectDialogTitle">新增專案</h2>
+          </div>
+          <button id="closeProjectDialog" class="ghost icon-only" value="cancel" type="submit" aria-label="關閉">×</button>
+        </header>
+
+        <label class="field">
+          <span>專案名稱</span>
+          <input id="projectTitleInput" type="text" placeholder="例如 Ollama Launch Clips" />
+        </label>
+
+        <label class="field">
+          <span>目標</span>
+          <input id="projectGoalInput" type="text" placeholder="Clicks, Signups, Product Hunt launch..." />
+        </label>
+
+        <footer>
+          <span id="projectDialogStatus">準備好了</span>
+          <button id="saveProject" class="button primary" type="button">儲存</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <dialog id="blockMediaDialog" class="settings-dialog media-dialog">
+      <section class="settings-dialog-card">
+        <header>
+          <div>
+            <span class="dialog-eyebrow">Scene Block</span>
+            <h2 id="blockMediaTitle">選擇影片來源</h2>
+          </div>
+          <button id="closeBlockMediaDialog" class="ghost icon-only" type="button" aria-label="關閉">×</button>
+        </header>
+
+        <div class="media-choice-grid">
+          <button class="media-choice" data-media-action="ai-video" type="button">
+            <strong>AI Video</strong>
+            <span>透過 provider 生成影片版本</span>
+          </button>
+          <button class="media-choice" data-media-action="hyperframes" type="button">
+            <strong>HyperFrames</strong>
+            <span>用模板/程式渲染一段影片</span>
+          </button>
+          <button class="media-choice" data-media-action="existing" type="button">
+            <strong>選擇舊影片</strong>
+            <span>從已生成或上傳的版本挑一個</span>
+          </button>
+          <button class="media-choice" data-media-action="upload" type="button">
+            <strong>Upload Video</strong>
+            <span>先用假資料標記為已上傳</span>
+          </button>
+        </div>
+
+        <section id="existingVideoList" class="existing-video-list" aria-label="舊影片列表"></section>
       </section>
     </dialog>
 
